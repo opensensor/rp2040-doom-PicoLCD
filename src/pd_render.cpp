@@ -10,8 +10,11 @@
 #include "picodoom.h"
 #include "pico/sem.h"
 #include "hardware/gpio.h"
+#include "hardware/spi.h"
 #include "pico/divider.h"
 #include "image_decoder.h"
+
+
 #include <set>
 extern "C" {
 #include "doom/d_main.h"
@@ -29,7 +32,26 @@ extern "C" {
 #include "doom/f_finale.h"
 #include "v_video.h"
 #include "i_video.h"
+#include "pico/stdlib.h"
+#include "pico/st7789.h"
 }
+
+
+// lcd configuration
+const struct st7789_config lcd_config = {
+    .spi      = PICO_DEFAULT_SPI_INSTANCE,
+    .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
+    .gpio_clk = PICO_DEFAULT_SPI_SCK_PIN,
+    .gpio_cs  = PICO_DEFAULT_SPI_CSN_PIN,
+    .gpio_dc  = 20,
+    .gpio_rst = 21,
+    .gpio_bl  = 22,
+};
+
+const int lcd_width = 240;
+const int lcd_height = 320;
+
+
 // todo compare with and without
 #define USE_XIPCPY 0
 #if PICO_ON_DEVICE
@@ -812,6 +834,8 @@ static void interp_init() {
 }
 
 void pd_init() {
+    printf("Hello, world!\n");
+
     sem_init(&core1_wake, 0, 1);
     sem_init(&core0_done, 0, 1);
     sem_init(&core1_done, 0, 1);
@@ -831,6 +855,8 @@ void pd_init() {
 #endif
     memset(patch_hash_offsets, -1, sizeof(patch_hash_offsets));
     patch_decoder_circular_buf_write_limit = PATCH_DECODER_CIRCULAR_BUFFER_SIZE;
+    st7789_init(&lcd_config, lcd_width, lcd_height);
+    st7789_fill(0xffff);
 }
 
 void pd_add_span() {

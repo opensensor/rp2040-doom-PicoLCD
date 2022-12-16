@@ -57,3 +57,7 @@ GTAGS
 *.wad
 *.whd
 /cmake-*/
+
+host-build/*
+3rdparty/*
+rp2040-build/*

@@ -130,7 +130,7 @@ pixel_t *I_VideoBuffer; // todo can't have this
 
 uint8_t __aligned(4) frame_buffer[2][SCREENWIDTH*MAIN_VIEWHEIGHT];
 static uint16_t palette[256];
-static uint16_t __scratch_x("shared_pal") shared_pal[NUM_SHARED_PALETTES][16];
+static uint16_t /*__scratch_x("shared_pal")*/ shared_pal[NUM_SHARED_PALETTES][16]; // TODO I can't fit all this in scratch but it's probably going to affect performance
 static int8_t next_pal=-1;
 
 semaphore_t render_frame_ready, display_frame_freed;

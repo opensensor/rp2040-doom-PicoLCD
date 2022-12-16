@@ -7,6 +7,7 @@ else()
 endif()
 
 add_subdirectory(adpcm-xq)
+add_subdirectory(pico_st7789)
 
 foreach(SUBDIR ${BINARIES})
     add_subdirectory("${SUBDIR}")
@@ -181,7 +182,7 @@ target_sources(game_deh INTERFACE
 target_link_libraries(game_deh INTERFACE game)
 
 if (NOT PICO_SDK)
-    set(EXTRA_LIBS SDL2::SDL2main SDL2::SDL2 SDL2::mixer SDL2::net textscreen pcsound)
+    set(EXTRA_LIBS SDL2::SDL2main SDL2::SDL2 SDL2::mixer SDL2::net textscreen pcsound hardware_spi)
     if(SAMPLERATE_FOUND)
         list(APPEND EXTRA_LIBS samplerate::samplerate)
     endif()
@@ -480,8 +481,11 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
             )
     target_include_directories(doom_tiny${SUFFIX} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../")
     target_link_libraries(doom_tiny${SUFFIX} PRIVATE doom ${EXTRA_LIBS})
-
     target_link_libraries(doom_tiny${SUFFIX} PRIVATE small_doom_common)
+    target_link_libraries(doom_tiny${SUFFIX} PRIVATE hardware_spi)
+    target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_st7789)
+    pico_enable_stdio_usb(doom_tiny${SUFFIX} 1)
+    pico_enable_stdio_uart(doom_tiny${SUFFIX} 0)
 
     if (PICO_SDK)
         pico_set_float_implementation(doom_tiny${SUFFIX} none)
@@ -575,7 +579,6 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
         target_compile_definitions(doom_tiny${SUFFIX} PRIVATE
                 NO_ZONE_DEBUG=1
                 )
-        #target_link_libraries(doom_tiny${SUFFIX} PRIVATE hardware_flash)
     endif()
     if (FORCE_DEBUG)
         target_compile_options(doom_tiny${SUFFIX} PRIVATE -g)
@@ -661,5 +664,6 @@ if (PICO_SDK)
                 )
     endif()
 endif()
+
 
 
