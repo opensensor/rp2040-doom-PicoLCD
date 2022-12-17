@@ -560,16 +560,21 @@ static void __noinline render_text_mode_scanline(scanvideo_scanline_buffer_t *bu
 }
 #endif
 
-static void __scratch_x("scanlines") scanline_func_double(uint32_t *dest, int scanline) {
+static void scanline_func_double(uint32_t *dest, int scanline) {
     if (scanline < MAIN_VIEWHEIGHT) {
         const uint8_t *src = frame_buffer[display_frame_index] + scanline * SCREENWIDTH;
 //        if (scanline == 100) {
 //            printf("SL %d %p\n", display_frame_index, &frame_buffer[display_frame_index]);
 //        }
-        if (scanline < 2400) {
-            st7789_set_cursor(160, scanline);
-            st7789_write(frame_buffer[display_frame_index] + scanline * SCREENWIDTH, sizeof(uint8_t) * 50);
-        }
+        // if (scanline < 2400) {
+        //     st7789_set_cursor(50, scanline);
+        //     for (int i = 0; i < 20; i++) {
+        //         const uint8_t* source_color = frame_buffer[display_frame_index] + scanline * SCREENWIDTH + i;
+        //         const uint16_t new_color[] = {  (*source_color) * 257 };
+        //         st7789_write(new_color, sizeof(new_color));
+        //     }
+        //     // st7789_write(frame_buffer[display_frame_index] + scanline * SCREENWIDTH, sizeof(uint8_t) * 20);
+        // }
 
         // int rand_x = rand() % 240;
         // int rand_y = rand() % 320;
@@ -992,17 +997,45 @@ void __no_inline_not_in_flash_func(new_frame_stuff)() {
 }
 
 void __scratch_x("scanlines") fill_scanlines() {
-#if SUPPORT_TEXT
-    struct scanvideo_scanline_buffer *buffer = scanvideo_begin_scanline_generation_linked(display_video_type == VIDEO_TYPE_TEXT ? 2 : 1, false);
-#else
-    struct scanvideo_scanline_buffer *buffer = scanvideo_begin_scanline_generation(false);
-#endif
+    for (int y = 0; y < 240; y++){
+        st7789_set_cursor(0, y+35);
+        for (int x = 0; x < 320; x++) {
+            const uint8_t* source_color = frame_buffer[display_frame_index] + y * SCREENWIDTH + x;
+            uint8_t red = (*source_color & 0b11100000) >> 5;
+            uint8_t green = (*source_color & 0b00011100) >> 2;
+            uint8_t blue = (*source_color & 0b00000011);
+
+            // Scale the 3:3:2 components to 5:6:5 values
+            red = (red << 3) | (red >> 2);
+            green = (green << 2) | (green >> 4);
+            blue = (blue << 3) | (blue >> 2);
+
+            uint16_t new_color = (red << 11) | (green << 5) | blue;
+            // uint16_t reversed_color = 0;
+            // for (int i = 0; i < 16; i++) {
+            //     reversed_color = (reversed_color << 1) | (new_color & 1);
+            //     new_color >>= 1;
+            // }
+            uint16_t new_color_arr[] = {new_color};
+
+            // Pack the 5:6:5 components into a uint16_t and return it
+            // const uint16_t new_color[] = {   };
+            // const uint16_t new_color[] = {  (*source_color) };
+            st7789_write(new_color_arr, sizeof(new_color));
+        }
+        // st7789_write(frame_buffer[display_frame_index] + scanline * SCREENWIDTH, sizeof(uint8_t) * 20);
+    }
+    new_frame_stuff();
+
+    // sleep_ms(1000);
 #if USE_INTERP
     need_save = interp_in_use;
     interp_updated = 0;
 #endif
 
-    while (buffer) {
+    struct scanvideo_scanline_buffer *buffer; // just to get compiler to stop complaining
+
+    while (false) { // BOB: used to be buffer. used to define scanline buffers above
         static int8_t last_frame_number = -1;
         int frame = scanvideo_frame_number(buffer->scanline_id);
         int scanline = scanvideo_scanline_number(buffer->scanline_id);
@@ -1101,16 +1134,16 @@ static void core1() {
                                        uint16_t *pixel_buffer, int32_t max_pixels, int32_t expected_width, bool overlay);
     scanvideo_set_simulate_scanvideo_pio_fn(VIDEO_DOOM_PROGRAM_NAME, simulate_video_pio_video_doom);
 #endif
-    scanvideo_setup(&VGA_MODE);
+    // scanvideo_setup(&VGA_MODE);
 //    sem_release(&init_sem);
 #if PICO_ON_DEVICE
-    irq_set_exclusive_handler(LOW_PRIO_IRQ, fill_scanlines);
-    irq_set_enabled(LOW_PRIO_IRQ, true);
-    scanvideo_set_scanline_release_fn(free_buffer_callback);
+    // irq_set_exclusive_handler(LOW_PRIO_IRQ, fill_scanlines);
+    // irq_set_enabled(LOW_PRIO_IRQ, true);
+    // scanvideo_set_scanline_release_fn(free_buffer_callback);
 #endif
-    scanvideo_timing_enable(true);
+    // scanvideo_timing_enable(true);
 #if PICO_ON_DEVICE
-    irq_set_pending(LOW_PRIO_IRQ);
+    // irq_set_pending(LOW_PRIO_IRQ);
 #endif
     sem_release(&core1_launch);
     while (true) {
@@ -1118,8 +1151,9 @@ static void core1() {
 #if PICO_ON_DEVICE
         tight_loop_contents();
 #else
-        fill_scanlines();
+        
 #endif
+    fill_scanlines();
     }
 }
 
