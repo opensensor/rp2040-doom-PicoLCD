@@ -182,7 +182,7 @@ target_sources(game_deh INTERFACE
 target_link_libraries(game_deh INTERFACE game)
 
 if (NOT PICO_SDK)
-    set(EXTRA_LIBS SDL2::SDL2main SDL2::SDL2 SDL2::mixer SDL2::net textscreen pcsound hardware_spi)
+    set(EXTRA_LIBS SDL2::SDL2main SDL2::SDL2 SDL2::mixer SDL2::net textscreen pcsound)
     if(SAMPLERATE_FOUND)
         list(APPEND EXTRA_LIBS samplerate::samplerate)
     endif()
@@ -343,7 +343,7 @@ target_compile_definitions(small_doom_common INTERFACE
         USE_LIGHTMAP_INDEXES=1 # saves about 9K
 
         #FRACBITS=15 # ha ha doesn't seem to be passed thru everywhere!
-        #NO_USE_ENDDOOM=1
+        NO_USE_ENDDOOM=1
         #NO_DRAW_VISPLANES=1
 
         USE_ERASE_FRAME=1 #
@@ -482,10 +482,9 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
     target_include_directories(doom_tiny${SUFFIX} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../")
     target_link_libraries(doom_tiny${SUFFIX} PRIVATE doom ${EXTRA_LIBS})
     target_link_libraries(doom_tiny${SUFFIX} PRIVATE small_doom_common)
-    target_link_libraries(doom_tiny${SUFFIX} PRIVATE hardware_spi)
-    target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_st7789)
-    pico_enable_stdio_usb(doom_tiny${SUFFIX} 1)
-    pico_enable_stdio_uart(doom_tiny${SUFFIX} 0)
+
+    pico_enable_stdio_usb(doom_tiny${SUFFIX} 0)
+    pico_enable_stdio_uart(doom_tiny${SUFFIX} 1)
 
     if (PICO_SDK)
         pico_set_float_implementation(doom_tiny${SUFFIX} none)
@@ -575,6 +574,8 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
         NO_IERROR=1
     )
     if (PICO_ON_DEVICE)
+        target_link_libraries(doom_tiny${SUFFIX} PRIVATE hardware_spi)
+        target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_st7789)
         target_compile_options(doom_tiny${SUFFIX} PRIVATE -fno-common -fdata-sections -Wl,--sort-section=alignment)
         target_compile_definitions(doom_tiny${SUFFIX} PRIVATE
                 NO_ZONE_DEBUG=1

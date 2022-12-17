@@ -10,7 +10,7 @@
 #include "picodoom.h"
 #include "pico/sem.h"
 #include "hardware/gpio.h"
-#include "hardware/spi.h"
+// #include "hardware/spi.h"
 #include "pico/divider.h"
 #include "image_decoder.h"
 
@@ -32,24 +32,26 @@ extern "C" {
 #include "doom/f_finale.h"
 #include "v_video.h"
 #include "i_video.h"
-#include "pico/stdlib.h"
+// #include "pico/stdlib.h"
+#if PICO_ON_DEVICE
 #include "pico/st7789.h"
+#endif
 }
 
 
-// lcd configuration
-const struct st7789_config lcd_config = {
-    .spi      = PICO_DEFAULT_SPI_INSTANCE,
-    .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
-    .gpio_clk = PICO_DEFAULT_SPI_SCK_PIN,
-    .gpio_cs  = PICO_DEFAULT_SPI_CSN_PIN,
-    .gpio_dc  = 20,
-    .gpio_rst = 21,
-    .gpio_bl  = 22,
-};
+// // lcd configuration
+// const struct st7789_config lcd_config = {
+//     .spi      = PICO_DEFAULT_SPI_INSTANCE,
+//     .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
+//     .gpio_clk = PICO_DEFAULT_SPI_SCK_PIN,
+//     .gpio_cs  = PICO_DEFAULT_SPI_CSN_PIN,
+//     .gpio_dc  = 20,
+//     .gpio_rst = 21,
+//     .gpio_bl  = 22,
+// };
 
-const int lcd_width = 240;
-const int lcd_height = 320;
+// const int lcd_width = 240;
+// const int lcd_height = 320;
 
 
 // todo compare with and without
@@ -781,6 +783,7 @@ static void push_down_x(int x, int new_index) {
 }
 
 void pd_begin_frame() {
+    // st7789_fill(0xffff);
     DEBUG_PINS_SET(start_end, 1);
     if (gamestate == GS_LEVEL) {
 //        render_frame_index ^= 1;
@@ -809,6 +812,8 @@ void pd_begin_frame() {
     render_col_free = -1;
     pd_frame++;
     DEBUG_PINS_CLR(start_end, 1);
+    // sleep_ms(100);
+    // st7789_fill(0x0000);
 }
 
 static void interp_init() {
@@ -834,7 +839,10 @@ static void interp_init() {
 }
 
 void pd_init() {
-    printf("Hello, world!\n");
+    // st7789_init(&lcd_config, lcd_width, lcd_height);
+#if PICO_ON_DEVICE
+    st7789_fill(0x1111);
+#endif
 
     sem_init(&core1_wake, 0, 1);
     sem_init(&core0_done, 0, 1);
@@ -855,8 +863,6 @@ void pd_init() {
 #endif
     memset(patch_hash_offsets, -1, sizeof(patch_hash_offsets));
     patch_decoder_circular_buf_write_limit = PATCH_DECODER_CIRCULAR_BUFFER_SIZE;
-    st7789_init(&lcd_config, lcd_width, lcd_height);
-    st7789_fill(0xffff);
 }
 
 void pd_add_span() {
@@ -2976,6 +2982,12 @@ void pd_end_frame(int wipe_start) {
     printf("GS %d vt %d fi %d\n", gamestate, next_video_type, next_frame_index);
 #endif
     sem_release(&render_frame_ready);
+    // st7789_set_cursor(40,40);
+    // st7789_write(render_frame_buffer, sizeof(frame_buffer[render_frame_index])/8);
+    // uint8_t *my_buffer = render_frame_buffer;
+    // for (int i = 0; i < SCREENWIDTH * MAIN_VIEWHEIGHT; i++) {
+    //     st7789_write(my_buffer++, sizeof(*my_buffer));
+    // }
     DEBUG_PINS_CLR(start_end, 2);
 }
 

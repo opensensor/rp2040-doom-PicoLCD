@@ -69,6 +69,11 @@ typedef struct __packed {
 #define TXT_SCREEN_W 80
 #include "fonts/normal.h"
 
+#if PICO_ON_DEVICE
+#include <stdlib.h>
+#include "pico/st7789.h"
+#endif
+
 static uint16_t ega_colors[] = {
     PICO_SCANVIDEO_PIXEL_FROM_RGB8(0x00, 0x00, 0x00),         // 0: Black
     PICO_SCANVIDEO_PIXEL_FROM_RGB8(0x00, 0x00, 0xa8),         // 1: Blue
@@ -91,7 +96,8 @@ static uint16_t ega_colors[] = {
 
 // todo temproarly turned this off because it causes a seeming bug in scanvideo (perhaps only with the new callback stuff) where the last repeated scanline of a pixel line is freed while shown
 //  note it may just be that this happens anyway, but usually we are writing slower than the beam?
-#define USE_INTERP PICO_ON_DEVICE
+//  previously PICO_ON_DEVICE but disabled to save scratch_x space
+#define USE_INTERP 0
 #if USE_INTERP
 #include "hardware/interp.h"
 #endif
@@ -130,7 +136,7 @@ pixel_t *I_VideoBuffer; // todo can't have this
 
 uint8_t __aligned(4) frame_buffer[2][SCREENWIDTH*MAIN_VIEWHEIGHT];
 static uint16_t palette[256];
-static uint16_t /*__scratch_x("shared_pal")*/ shared_pal[NUM_SHARED_PALETTES][16]; // TODO I can't fit all this in scratch but it's probably going to affect performance
+static uint16_t __scratch_x("shared_pal") shared_pal[NUM_SHARED_PALETTES][16]; // TODO I can't fit all this in scratch but it's probably going to affect performance
 static int8_t next_pal=-1;
 
 semaphore_t render_frame_ready, display_frame_freed;
@@ -560,6 +566,22 @@ static void __scratch_x("scanlines") scanline_func_double(uint32_t *dest, int sc
 //        if (scanline == 100) {
 //            printf("SL %d %p\n", display_frame_index, &frame_buffer[display_frame_index]);
 //        }
+        if (scanline < 240) {
+            // st7789_set_cursor(0, scanline)
+            st7789_write(frame_buffer[display_frame_index] + scanline * SCREENWIDTH, sizeof(uint8_t) * 120);
+        }
+
+        // int rand_x = rand() % 240;
+        // int rand_y = rand() % 320;
+        // uint16_t rand_color = rand() % 0xffff;
+        
+        // // move the cursor to the random x and y position
+        // st7789_set_cursor(rand_x, rand_y);
+
+        // // put the random color as the pixel value
+        // st7789_put(rand_color);
+
+
         palette_convert_scanline(dest, src);
     } else {
         // we expect everything to be overdrawn by statusbar so we do nothing
@@ -1036,6 +1058,7 @@ void __scratch_x("scanlines") fill_scanlines() {
             render_text_mode_scanline(buffer, scanline);
 #else
             memset(buffer->data + 1, 0, SCREENWIDTH * 2);
+            // uint16_t *p = (uint16_t *) buffer->data;
             p[0] = video_doom_offset_raw_run;
             p[1] = p[2];
             p[2] = SCREENWIDTH - 3;
