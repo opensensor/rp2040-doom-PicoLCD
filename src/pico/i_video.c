@@ -1006,22 +1006,22 @@ void __scratch_x("scanlines") fill_scanlines() {
             uint8_t blue = (*source_color & 0b00000011);
 
             // Scale the 3:3:2 components to 5:6:5 values
-            red = (red << 3) | (red >> 2);
-            green = (green << 2) | (green >> 4);
-            blue = (blue << 3) | (blue >> 2);
+            // red = (red << 3) | (red >> 2);
+            // green = (green << 2) | (green >> 4);
+            // blue = (blue << 3) | (blue >> 2);
 
-            uint16_t new_color = (red << 11) | (green << 5) | blue;
-            // uint16_t reversed_color = 0;
-            // for (int i = 0; i < 16; i++) {
-            //     reversed_color = (reversed_color << 1) | (new_color & 1);
-            //     new_color >>= 1;
-            // }
-            uint16_t new_color_arr[] = {new_color};
+            // uint16_t new_color = (red << 11) | (green << 5) | blue;
+            // uint16_t new_color = ((red + 1) * 4-1) << 11 | ((green + 1) * 8-1) << 5 | ((blue + 1)*8-1);
+            uint16_t new_color = palette[*source_color];
+            // uint16_t new_color = new_color | 0b11111 START HERE red and blue are swapped
+            // color goes RrrrrGgggggBbbbb, caps are MSB
+            // uint16_t new_color_arr[] = { 0b0000000000100000 };
+            uint16_t new_color_arr[] = { new_color };
 
             // Pack the 5:6:5 components into a uint16_t and return it
             // const uint16_t new_color[] = {   };
             // const uint16_t new_color[] = {  (*source_color) };
-            st7789_write(new_color_arr, sizeof(new_color));
+            st7789_write(new_color_arr, sizeof(new_color_arr));
         }
         // st7789_write(frame_buffer[display_frame_index] + scanline * SCREENWIDTH, sizeof(uint8_t) * 20);
     }
