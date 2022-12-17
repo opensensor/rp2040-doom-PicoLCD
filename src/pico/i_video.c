@@ -566,9 +566,9 @@ static void __scratch_x("scanlines") scanline_func_double(uint32_t *dest, int sc
 //        if (scanline == 100) {
 //            printf("SL %d %p\n", display_frame_index, &frame_buffer[display_frame_index]);
 //        }
-        if (scanline < 240) {
-            // st7789_set_cursor(0, scanline)
-            st7789_write(frame_buffer[display_frame_index] + scanline * SCREENWIDTH, sizeof(uint8_t) * 120);
+        if (scanline < 2400) {
+            st7789_set_cursor(160, scanline);
+            st7789_write(frame_buffer[display_frame_index] + scanline * SCREENWIDTH, sizeof(uint8_t) * 50);
         }
 
         // int rand_x = rand() % 240;

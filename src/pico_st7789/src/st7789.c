@@ -134,7 +134,7 @@ void st7789_init(const struct st7789_config* config, uint16_t width, uint16_t he
     // - Line Address Order            = LCD Refresh Top to Bottom
     // - RGB/BGR Order                 = RGB
     // - Display Data Latch Data Order = LCD Refresh Left to Right
-    st7789_cmd(0x36, (uint8_t[]){ 0x00 }, 1);
+    st7789_cmd(0x36, (uint8_t[]){ 0b11100000 }, 1);
    
     st7789_caset(0, width);
     st7789_raset(0, height);

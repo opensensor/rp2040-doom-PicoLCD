@@ -123,8 +123,8 @@ char *          iwadfile;
         .gpio_bl  = 22,
     };
 
-    const int lcd_width = 240;
-    const int lcd_height = 320;
+    const int lcd_width = 320;
+    const int lcd_height = 240;
 #endif
 
 boolean		devparm;	// started game with -devparm
