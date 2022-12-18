@@ -496,6 +496,7 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
             -Wno-format-truncation)
     target_compile_definitions(doom_tiny${SUFFIX} PRIVATE
         DOOM_TINY=1
+        ST7789=1
         EMU8950_SLOT_RENDER=1
 
         SHRINK_MOBJ=1 # may break saved games

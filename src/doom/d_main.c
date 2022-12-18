@@ -83,13 +83,6 @@
 #include "i_picosound.h"
 #endif
 
-#if PICO_ON_DEVICE
-
-#include "pico/st7789.h"
-#endif
-#include <stdio.h>
-#include "pico/stdlib.h"
-
 //
 // D-DoomLoop()
 // Not a globally visible function,
@@ -109,22 +102,6 @@ char *          savegamedir;
 // location of IWAD and WAD files
 
 char *          iwadfile;
-#endif
-
-#if PICO_ON_DEVICE
-    // lcd configuration
-    const struct st7789_config lcd_config = {
-        .spi      = PICO_DEFAULT_SPI_INSTANCE,
-        .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
-        .gpio_clk = PICO_DEFAULT_SPI_SCK_PIN,
-        .gpio_cs  = PICO_DEFAULT_SPI_CSN_PIN,
-        .gpio_dc  = 20,
-        .gpio_rst = 21,
-        .gpio_bl  = 22,
-    };
-
-    const int lcd_width = 320;
-    const int lcd_height = 240;
 #endif
 
 boolean		devparm;	// started game with -devparm
@@ -1352,18 +1329,6 @@ void D_DoomMain (void)
     char file[256];
     char demolumpname[9];
 
-#if PICO_ON_DEVICE
-    st7789_init(&lcd_config, lcd_width, lcd_height);
-    // stdio_init_all();
-    // stdout_uart_init();
-    // while (true) {
-        // printf("Hello, world!\n");
-        // sleep_ms(1000);
-    st7789_fill(0xffff);
-    // }
-#endif
-    // st7789_fill(0xffff);
-
 //    for(uint i=0;i<2048;i++) {
 //        if (_finesine[i] + _finesine[i + 4096] != 0 ||
 //                _finesine[i] + _finesine[8191 - i] != 0 ||
@@ -1599,8 +1564,6 @@ void D_DoomMain (void)
     }
 #endif
 
-st7789_fill(0xffff);
-
 #if !DOOM_TINY
     modifiedgame = false;
 #endif
@@ -1618,10 +1581,6 @@ st7789_fill(0xffff);
 #else
     gamemission = IdentifyIWADByName(whdheader->name);
 #endif
-
-st7789_fill(0x8888);
-sleep_ms(500);
-
 
     // Now that we've loaded the IWAD, we can figure out what gamemission
     // we're playing and which version of Vanilla Doom we need to emulate.

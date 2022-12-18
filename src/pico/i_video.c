@@ -69,9 +69,31 @@ typedef struct __packed {
 #define TXT_SCREEN_W 80
 #include "fonts/normal.h"
 
-#if PICO_ON_DEVICE
+#if ST7789
 #include <stdlib.h>
 #include "pico/st7789.h"
+
+// lcd configuration
+const struct st7789_config lcd_config = {
+    .spi      = PICO_DEFAULT_SPI_INSTANCE,
+    .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
+    .gpio_clk = PICO_DEFAULT_SPI_SCK_PIN,
+    .gpio_cs  = PICO_DEFAULT_SPI_CSN_PIN,
+    .gpio_dc  = 20,
+    .gpio_rst = 21,
+    .gpio_bl  = 22,
+};
+
+#define MEMORY_WIDTH 320
+#define MEMORY_HEIGHT 240
+
+#define LCD_WIDTH 160
+#define LCD_HEIGHT 120
+
+// TODO find wherever these are already stored
+#define DOOM_WIDTH 320
+#define DOOM_HEIGHT 240
+
 #endif
 
 static uint16_t ega_colors[] = {
@@ -314,12 +336,12 @@ uint8_t display_frame_index;
 uint8_t display_overlay_index;
 uint8_t display_video_type;
 
-typedef void (*scanline_func)(uint32_t *dest, int scanline);
+typedef void (*scanline_func)(int scanline);
 
-static void scanline_func_none(uint32_t *dest, int scanline);
-static void scanline_func_double(uint32_t *dest, int scanline);
-static void scanline_func_single(uint32_t *dest, int scanline);
-static void scanline_func_wipe(uint32_t *dest, int scanline);
+static void scanline_func_none(int scanline);
+static void scanline_func_double(int scanline);
+static void scanline_func_single(int scanline);
+static void scanline_func_wipe(int scanline);
 
 scanline_func scanline_funcs[] = {
         scanline_func_none,     // VIDEO_TYPE_NONE
@@ -386,8 +408,11 @@ static inline void palette_convert_scanline(uint32_t *dest, const uint8_t *src) 
     }
 #endif
 }
-static void scanline_func_none(uint32_t *dest, int scanline) {
-    memset(dest, 0, SCREENWIDTH * 2);
+static void scanline_func_none(int scanline) {
+    for (uint8_t x = 0; x < MEMORY_WIDTH; x++) {
+        st7789_put(0x0000);
+    }
+    // memset(dest, 0, SCREENWIDTH * 2);
 }
 
 #if SUPPORT_TEXT
@@ -560,40 +585,25 @@ static void __noinline render_text_mode_scanline(scanvideo_scanline_buffer_t *bu
 }
 #endif
 
-static void scanline_func_double(uint32_t *dest, int scanline) {
+static void scanline_func_double(int scanline) {
     if (scanline < MAIN_VIEWHEIGHT) {
         const uint8_t *src = frame_buffer[display_frame_index] + scanline * SCREENWIDTH;
-//        if (scanline == 100) {
-//            printf("SL %d %p\n", display_frame_index, &frame_buffer[display_frame_index]);
-//        }
-        // if (scanline < 2400) {
-        //     st7789_set_cursor(50, scanline);
-        //     for (int i = 0; i < 20; i++) {
-        //         const uint8_t* source_color = frame_buffer[display_frame_index] + scanline * SCREENWIDTH + i;
-        //         const uint16_t new_color[] = {  (*source_color) * 257 };
-        //         st7789_write(new_color, sizeof(new_color));
-        //     }
-        //     // st7789_write(frame_buffer[display_frame_index] + scanline * SCREENWIDTH, sizeof(uint8_t) * 20);
-        // }
-
-        // int rand_x = rand() % 240;
-        // int rand_y = rand() % 320;
-        // uint16_t rand_color = rand() % 0xffff;
+        for (uint8_t x = 0; x < DOOM_WIDTH; x++) {
+            const uint8_t source_color = src[x];
+            uint16_t new_color = palette[source_color];
+            // color goes BbbbbGgggggRrrrr, caps are MSB
+            new_color = ((0b1111100000000000 & new_color) >> 11) | (0b0000011111100000 & new_color) | ((0b0000000000011111 & new_color) << 11);
+            // TODO can expand and put whole scanline 4 speed
+            st7789_put(new_color);
+        }
         
-        // // move the cursor to the random x and y position
-        // st7789_set_cursor(rand_x, rand_y);
-
-        // // put the random color as the pixel value
-        // st7789_put(rand_color);
-
-
-        palette_convert_scanline(dest, src);
+        // palette_convert_scanline(dest, src);
     } else {
         // we expect everything to be overdrawn by statusbar so we do nothing
     }
 }
 
-static void __not_in_flash_func(scanline_func_single)(uint32_t *dest, int scanline) {
+static void __not_in_flash_func(scanline_func_single)(int scanline) {
     uint8_t *src;
     if (scanline < MAIN_VIEWHEIGHT) {
         src = frame_buffer[display_frame_index] + scanline * SCREENWIDTH;
@@ -608,10 +618,19 @@ static void __not_in_flash_func(scanline_func_single)(uint32_t *dest, int scanli
         src[0] = video_scroll[scanline];
     }
 #endif
-    palette_convert_scanline(dest, src);
+// const uint8_t *src = frame_buffer[display_frame_index] + scanline * SCREENWIDTH;
+    for (uint8_t x = 0; x < DOOM_WIDTH; x++) {
+        const uint8_t source_color = src[x];
+        uint16_t new_color = palette[source_color];
+        // color goes BbbbbGgggggRrrrr, caps are MSB
+        new_color = ((0b1111100000000000 & new_color) >> 11) | (0b0000011111100000 & new_color) | ((0b0000000000011111 & new_color) << 11);
+        
+        st7789_put(new_color);
+    }
+    // palette_convert_scanline(dest, src);
 }
 
-static void scanline_func_wipe(uint32_t *dest, int scanline) {
+static void scanline_func_wipe(int scanline) {
     const uint8_t *src;
 #if 0
     if (scanline < MAIN_VIEWHEIGHT) {
@@ -628,12 +647,13 @@ static void scanline_func_wipe(uint32_t *dest, int scanline) {
         src = frame_buffer[display_frame_index^1] - 32 * SCREENWIDTH;
     }
     assert(wipe_yoffsets && wipe_linelookup);
-    uint16_t *d = (uint16_t *)dest;
+    // uint16_t *d = (uint16_t *)dest;
     src += scanline * SCREENWIDTH;
     for (int i = 0; i < SCREENWIDTH; i++) {
         int rel = scanline - wipe_yoffsets[i];
         if (rel < 0) {
-            d[i] = palette[src[i]];
+            // d[i] = palette[src[i]];
+            st7789_put(palette[src[i]]);
         } else {
             const uint8_t *flip;
 #if PICO_ON_DEVICE
@@ -643,7 +663,8 @@ static void scanline_func_wipe(uint32_t *dest, int scanline) {
 #endif
             // todo better protection here
             if (flip >= &frame_buffer[0][0] && flip < &frame_buffer[0][0] + 2 * SCREENWIDTH * MAIN_VIEWHEIGHT) {
-                d[i] = palette[flip[i]];
+                // d[i] = palette[flip[i]];
+                st7789_put(palette[flip[i]]);
             }
         }
     }
@@ -997,22 +1018,13 @@ void __no_inline_not_in_flash_func(new_frame_stuff)() {
 }
 
 void __scratch_x("scanlines") fill_scanlines() {
-    for (int y = 0; y < 240; y++){
-        st7789_set_cursor(0, y+35);
-        for (int x = 0; x < 320; x++) {
+    for (int y = 0; y < DOOM_HEIGHT; y = y + (DOOM_HEIGHT / LCD_HEIGHT)){
+        st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (y / (DOOM_HEIGHT / LCD_HEIGHT))); // kek
+        
+        for (int x = 0; x < DOOM_WIDTH; x = x + (DOOM_WIDTH / LCD_WIDTH)) {
             const uint8_t* source_color = frame_buffer[display_frame_index] + y * SCREENWIDTH + x;
-            uint8_t red = (*source_color & 0b11100000) >> 5;
-            uint8_t green = (*source_color & 0b00011100) >> 2;
-            uint8_t blue = (*source_color & 0b00000011);
-
-            // Scale the 3:3:2 components to 5:6:5 values
-            // red = (red << 3) | (red >> 2);
-            // green = (green << 2) | (green >> 4);
-            // blue = (blue << 3) | (blue >> 2);
-
-            // uint16_t new_color = (red << 11) | (green << 5) | blue;
-            // uint16_t new_color = ((red + 1) * 4-1) << 11 | ((green + 1) * 8-1) << 5 | ((blue + 1)*8-1);
             uint16_t new_color = palette[*source_color];
+            new_color = ((0b1111100000000000 & new_color) >> 11) | (0b0000011111100000 & new_color) | ((0b0000000000011111 & new_color) << 11);
             // uint16_t new_color = new_color | 0b11111 START HERE red and blue are swapped
             // color goes RrrrrGgggggBbbbb, caps are MSB
             // uint16_t new_color_arr[] = { 0b0000000000100000 };
@@ -1026,6 +1038,7 @@ void __scratch_x("scanlines") fill_scanlines() {
         // st7789_write(frame_buffer[display_frame_index] + scanline * SCREENWIDTH, sizeof(uint8_t) * 20);
     }
     new_frame_stuff();
+    return;
 
     // sleep_ms(1000);
 #if USE_INTERP
@@ -1035,20 +1048,13 @@ void __scratch_x("scanlines") fill_scanlines() {
 
     struct scanvideo_scanline_buffer *buffer; // just to get compiler to stop complaining
 
-    while (false) { // BOB: used to be buffer. used to define scanline buffers above
-        static int8_t last_frame_number = -1;
-        int frame = scanvideo_frame_number(buffer->scanline_id);
-        int scanline = scanvideo_scanline_number(buffer->scanline_id);
-        if ((int8_t) frame != last_frame_number) {
-            last_frame_number = frame;
-            new_frame_stuff();
-        }
-
+    for (uint8_t scanline = 0; scanline < DOOM_HEIGHT; scanline++) { // BOB: used to be buffer. used to define scanline buffers above
         DEBUG_PINS_SET(scanline_copy, 1);
         if (display_video_type != VIDEO_TYPE_TEXT) {
             // we don't have text mode -> normal transition yet, but we may for network game, so leaving this here - we would need to put the buffer pointers back
-            assert (buffer->data < text_scanline_buffer_start || buffer->data >= text_scanline_buffer_start + TEXT_SCANLINE_BUFFER_TOTAL_WORDS);
-            scanline_funcs[display_video_type](buffer->data+1, scanline);
+            // assert (buffer->data < text_scanline_buffer_start || buffer->data >= text_scanline_buffer_start + TEXT_SCANLINE_BUFFER_TOTAL_WORDS);
+            scanline_funcs[display_video_type](scanline);
+            continue;
             if (display_video_type >= FIRST_VIDEO_TYPE_WITH_OVERLAYS) {
                 assert(scanline < count_of(vpatchlists->vpatch_starters));
                 int prev = 0;
@@ -1107,6 +1113,7 @@ void __scratch_x("scanlines") fill_scanlines() {
         buffer = scanvideo_begin_scanline_generation(false);
 #endif
     }
+    new_frame_stuff();
 #if USE_INTERP
     if (interp_updated && need_save) {
         interp_restore_static(interp0, &interp0_save);
@@ -1159,6 +1166,13 @@ static void core1() {
 
 void I_InitGraphics(void)
 {
+
+#if ST7789
+    // width and height only come into play for fills so let's just pass the memory size instead of LCD size
+    st7789_init(&lcd_config, MEMORY_WIDTH, MEMORY_HEIGHT);
+    st7789_fill(0xffff);
+#endif
+
     stbar = resolve_vpatch_handle(VPATCH_STBAR);
     sem_init(&render_frame_ready, 0, 2);
     sem_init(&display_frame_freed, 1, 2);
