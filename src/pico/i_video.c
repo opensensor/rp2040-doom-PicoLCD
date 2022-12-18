@@ -92,7 +92,7 @@ const struct st7789_config lcd_config = {
 
 // TODO find wherever these are already stored
 #define DOOM_WIDTH 320
-#define DOOM_HEIGHT 240
+#define DOOM_HEIGHT 200
 
 #endif
 
@@ -137,6 +137,8 @@ volatile uint8_t interp_in_use;
 
 static boolean initialized = false;
 
+static uint8_t frame = 0;
+
 boolean screenvisible = true;
 
 //int vga_porch_flash = false;
@@ -165,7 +167,7 @@ semaphore_t render_frame_ready, display_frame_freed;
 semaphore_t core1_launch;
 
 uint8_t *text_screen_data;
-static uint32_t *text_scanline_buffer_start;
+static uint16_t *text_scanline_buffer_start; // TODO BOB I changed this from 32 to 16 but I'm not _entirely_ sure that's kosher
 static uint8_t *text_screen_cpy;
 static uint8_t *text_font_cpy;
 
@@ -336,12 +338,12 @@ uint8_t display_frame_index;
 uint8_t display_overlay_index;
 uint8_t display_video_type;
 
-typedef void (*scanline_func)(int scanline);
+typedef void (*scanline_func)(uint16_t *dest, int scanline);
 
-static void scanline_func_none(int scanline);
-static void scanline_func_double(int scanline);
-static void scanline_func_single(int scanline);
-static void scanline_func_wipe(int scanline);
+static void scanline_func_none(uint16_t *dest, int scanline);
+static void scanline_func_double(uint16_t *dest, int scanline);
+static void scanline_func_single(uint16_t *dest, int scanline);
+static void scanline_func_wipe(uint16_t *dest, int scanline);
 
 scanline_func scanline_funcs[] = {
         scanline_func_none,     // VIDEO_TYPE_NONE
@@ -363,7 +365,7 @@ uint8_t *next_video_scroll;
 uint8_t *video_scroll;
 #endif
 volatile uint8_t wipe_min;
-uint32_t *saved_scanline_buffer_ptrs[PICO_SCANVIDEO_SCANLINE_BUFFER_COUNT];
+uint16_t *saved_scanline_buffer_ptrs[PICO_SCANVIDEO_SCANLINE_BUFFER_COUNT]; // TODO BOB I changed this from 32 to 16 but I'm not sure that's kocher
 
 #pragma GCC push_options
 #if PICO_ON_DEVICE
@@ -410,44 +412,44 @@ static inline void palette_convert_scanline(uint32_t *dest, const uint8_t *src) 
 }
 
 // TODO BOB reinstate
-static void scanline_func_none(int scanline) {
-    scanline_func_double(scanline);
+static void scanline_func_none(uint16_t *dest, int scanline) {
+    scanline_func_double(dest, scanline); // TODO just set to black instead
     // memset(dest, 0, SCREENWIDTH * 2);
 }
 
 #if SUPPORT_TEXT
-void check_text_buffer(scanvideo_scanline_buffer_t *buffer) {
+void check_text_buffer(uint16_t *buffer) {
 #if PICO_ON_DEVICE
-    if (buffer->data < text_scanline_buffer_start || buffer->data >= text_scanline_buffer_start + TEXT_SCANLINE_BUFFER_TOTAL_WORDS) {
+    if (buffer < text_scanline_buffer_start || buffer >= text_scanline_buffer_start + TEXT_SCANLINE_BUFFER_TOTAL_WORDS) {
         // is an original scanvideo allocated buffer, we need to use a larger one
         int i;
         for(i=0;i<PICO_SCANVIDEO_SCANLINE_BUFFER_COUNT;i++) {
             if (!saved_scanline_buffer_ptrs[i]) break;
         }
         assert(i<PICO_SCANVIDEO_SCANLINE_BUFFER_COUNT);
-        saved_scanline_buffer_ptrs[i] = buffer->data;
-        buffer->data = text_scanline_buffer_start + i * TEXT_SCANLINE_BUFFER_WORDS;
+        saved_scanline_buffer_ptrs[i] = buffer;
+        buffer = text_scanline_buffer_start + i * TEXT_SCANLINE_BUFFER_WORDS;
     }
 #endif
 }
 
-static void finish_text_buffer(scanvideo_scanline_buffer_t *buffer) {
-    uint16_t * p = (uint16_t *)buffer->data;
-    p[0] = video_doom_offset_raw_run_half;
-    p[1] = p[2];
-    p[2] = SCREENWIDTH*2 - 3;
-    buffer->data[SCREENWIDTH + 1] = video_doom_offset_raw_1p;
-    buffer->data[SCREENWIDTH + 2] = video_doom_offset_end_of_scanline_skip_ALIGN;
-    buffer->data_used = SCREENWIDTH + 3;
+static void finish_text_buffer(uint16_t *buffer) {
+    // uint16_t * p = (uint16_t *)buffer->data; // TODO BOB can I safely ignore this?
+    // p[0] = video_doom_offset_raw_run_half;
+    // p[1] = p[2];
+    // p[2] = SCREENWIDTH*2 - 3;
+    // buffer->data[SCREENWIDTH + 1] = video_doom_offset_raw_1p;
+    // buffer->data[SCREENWIDTH + 2] = video_doom_offset_end_of_scanline_skip_ALIGN;
+    // buffer->data_used = SCREENWIDTH + 3;
 }
 
-static void __not_in_flash_func(render_text_mode_half_scanline)(scanvideo_scanline_buffer_t *buffer, const uint8_t *text_data, int yoffset) {
-    uint16_t * p = (uint16_t *)(buffer->data + 1);
+static void __not_in_flash_func(render_text_mode_half_scanline)(uint16_t *buffer, const uint8_t *text_data, int yoffset) {
+    uint16_t * p = (uint16_t *)(buffer);
 //    memset(buffer->data + 1, 0, 1280);
 //    uint x = scanline * 2 + yoffset;
 //    buffer->data[1 + (x/2)] = x&1 ? 0xffff0000 : 0xffff;
 #if 1
-    uint blink = scanvideo_frame_number(buffer->scanline_id) & 16;
+    uint blink = frame & 16;
     // not going to change so just hard code
 //    assert(normal_font.w == 8);
 //    assert(normal_font.h == 16);
@@ -545,7 +547,7 @@ static void __not_in_flash_func(render_text_mode_half_scanline)(scanvideo_scanli
 #endif
 }
 
-static void __noinline render_text_mode_scanline(scanvideo_scanline_buffer_t *buffer, int scanline) {
+static void __noinline render_text_mode_scanline(uint16_t *buffer, int scanline) {
 #if 1
     const uint8_t *text_data = text_screen_data;
     assert(text_data);
@@ -553,13 +555,13 @@ static void __noinline render_text_mode_scanline(scanvideo_scanline_buffer_t *bu
     check_text_buffer(buffer);
     render_text_mode_half_scanline(buffer, text_data, (scanline & 7u)*2 );
     finish_text_buffer(buffer);
-    if (buffer->link) {
-        buffer->link_after = 2;
-        buffer->link->link_after = 0;
-        check_text_buffer(buffer->link);
-        render_text_mode_half_scanline(buffer->link, text_data, (scanline & 7u)*2 + 1);
-        finish_text_buffer(buffer->link);
-    }
+    // if (buffer->link) { // TODO BOB can I safely ignore this? I think this is for frame doubling for larger VGA frames
+    //     buffer->link_after = 2;
+    //     buffer->link->link_after = 0;
+    //     check_text_buffer(buffer->link);
+    //     render_text_mode_half_scanline(buffer->link, text_data, (scanline & 7u)*2 + 1);
+    //     finish_text_buffer(buffer->link);
+    // }
 #else
     uint16_t *p = (uint16_t *)buffer->data;
     p[0] = video_doom_offset_raw_run;
@@ -585,28 +587,26 @@ static void __noinline render_text_mode_scanline(scanvideo_scanline_buffer_t *bu
 }
 #endif
 
-static void scanline_func_double(int scanline) {
+// not needed anymore, I swapped the colors at the source
+static uint16_t rgb_to_bgr(uint16_t rgb) {
+    return ((0b1111100000000000 & rgb) >> 11) | (0b0000011111100000 & rgb) | ((0b0000000000011111 & rgb) << 11);
+}
+
+static void scanline_func_double(uint16_t *dest, int scanline) {
     // st7789_set_cursor(0, scanline);
     const uint8_t* src = frame_buffer[display_frame_index] + scanline * SCREENWIDTH;
-    for (int x = 0; x < DOOM_WIDTH; x++) {
-        const uint8_t* source_color = src + x;
-        uint16_t new_color = palette[*source_color];
-        new_color = ((0b1111100000000000 & new_color) >> 11) | (0b0000011111100000 & new_color) | ((0b0000000000011111 & new_color) << 11);
-        // uint16_t new_color = new_color | 0b11111 START HERE red and blue are swapped
-        // color goes RrrrrGgggggBbbbb, caps are MSB
-        // uint16_t new_color_arr[] = { 0b0000000000100000 };
-        uint16_t new_color_arr[] = { new_color };
-
-        // Pack the 5:6:5 components into a uint16_t and return it
-        // const uint16_t new_color[] = {   };
-        // const uint16_t new_color[] = {  (*source_color) };
-        st7789_put(new_color);
-        // st7789_write(new_color_arr, sizeof(new_color_arr));
-    }
     // st7789_set_cursor(100, 100);
     // for(uint8_t y = 0; y < DOOM_HEIGHT; y++) {
         // st7789_fill(0x8888);
-    if (scanline < MAIN_VIEWHEIGHT) {
+    if (scanline < MAIN_VIEWHEIGHT) { 
+        for (int x = 0; x < DOOM_WIDTH; x++) {
+            const uint8_t* source_color = src + x;
+            uint16_t new_color = palette[*source_color];
+
+            // st7789_put(rgb_to_bgr(new_color));
+            dest[x] = new_color;
+            // st7789_write(new_color_arr, sizeof(new_color_arr));
+        }
         // for (uint8_t x = 0; x < DOOM_WIDTH; x++) {
         //     uint8_t *source_color = frame_buffer[display_frame_index] + scanline * SCREENWIDTH + x;
         //     uint16_t new_color = palette[*source_color];
@@ -624,7 +624,7 @@ static void scanline_func_double(int scanline) {
 }
 
 // TODO BOB REINSTATE
-static void __not_in_flash_func(scanline_func_single)(int scanline) {
+static void __not_in_flash_func(scanline_func_single)(uint16_t *dest, int scanline) {
     uint8_t *src;
     if (scanline < MAIN_VIEWHEIGHT) {
         src = frame_buffer[display_frame_index] + scanline * SCREENWIDTH;
@@ -642,27 +642,16 @@ static void __not_in_flash_func(scanline_func_single)(int scanline) {
     for (int x = 0; x < DOOM_WIDTH; x++) {
         const uint8_t* source_color = src + x;
         uint16_t new_color = palette[*source_color];
-        new_color = ((0b1111100000000000 & new_color) >> 11) | (0b0000011111100000 & new_color) | ((0b0000000000011111 & new_color) << 11);
-        // uint16_t new_color = new_color | 0b11111 START HERE red and blue are swapped
-        // color goes RrrrrGgggggBbbbb, caps are MSB
-        // uint16_t new_color_arr[] = { 0b0000000000100000 };
-        uint16_t new_color_arr[] = { new_color };
-
-        // Pack the 5:6:5 components into a uint16_t and return it
-        // const uint16_t new_color[] = {   };
-        // const uint16_t new_color[] = {  (*source_color) };
-        st7789_put(new_color);
+        // new_color = ((0b1111100000000000 & new_color) >> 11) | (0b0000011111100000 & new_color) | ((0b0000000000011111 & new_color) << 11);
+        // st7789_put(rgb_to_bgr(new_color));
+        dest[x] = new_color;
         // st7789_write(new_color_arr, sizeof(new_color_arr));
     }
     // palette_convert_scanline(dest, src);
 }
 
-static uint16_t rgb_to_bgr(uint16_t rgb) {
-    return ((0b1111100000000000 & rgb) >> 11) | (0b0000011111100000 & rgb) | ((0b0000000000011111 & rgb) << 11);
-}
-
 // TODO BOB REINSTATE
-static void scanline_func_wipe(int scanline) {
+static void scanline_func_wipe(uint16_t *dest, int scanline) {
     const uint8_t *src;
 #if 0
     if (scanline < MAIN_VIEWHEIGHT) {
@@ -679,13 +668,14 @@ static void scanline_func_wipe(int scanline) {
         src = frame_buffer[display_frame_index^1] - 32 * SCREENWIDTH;
     }
     assert(wipe_yoffsets && wipe_linelookup);
-    // uint16_t *d = (uint16_t *)dest;
+    uint16_t *d = (uint16_t *)dest;
     src += scanline * SCREENWIDTH;
     for (int i = 0; i < SCREENWIDTH; i++) {
         int rel = scanline - wipe_yoffsets[i];
         if (rel < 0) {
-            // d[i] = palette[src[i]];
-            st7789_put(rgb_to_bgr(palette[src[i]]));
+            d[i] = palette[src[i]];
+            // st7789_put(rgb_to_bgr(palette[src[i]]));
+            // dest[i] = rgb_to_bgr(palette[src[i]]);
         } else {
             const uint8_t *flip;
 #if PICO_ON_DEVICE
@@ -695,8 +685,9 @@ static void scanline_func_wipe(int scanline) {
 #endif
             // todo better protection here
             if (flip >= &frame_buffer[0][0] && flip < &frame_buffer[0][0] + 2 * SCREENWIDTH * MAIN_VIEWHEIGHT) {
-                // d[i] = palette[flip[i]];
-                st7789_put(rgb_to_bgr(palette[flip[i]]));
+                d[i] = palette[flip[i]];
+                // st7789_put(rgb_to_bgr(palette[flip[i]]));
+                // dest[i] = rgb_to_bgr(palette[src[i]]);
             }
         }
     }
@@ -959,7 +950,7 @@ void __noinline new_frame_init_overlays_palette_and_wipe() {
                         g = gammatable[usegamma-1][g];
                         b = gammatable[usegamma-1][b];
                     }
-                    palette[i] = PICO_SCANVIDEO_PIXEL_FROM_RGB8(r, g, b);
+                    palette[i] = PICO_SCANVIDEO_PIXEL_FROM_RGB8(b, g, r); // BOB: don't ask I have no idea
                 }
             } else {
                 int mul, r0, g0, b0;
@@ -981,7 +972,7 @@ void __noinline new_frame_init_overlays_palette_and_wipe() {
                     r += ((r0 - r) * mul) >> 16;
                     g += ((g0 - g) * mul) >> 16;
                     b += ((b0 - b) * mul) >> 16;
-                    palette[i] = PICO_SCANVIDEO_PIXEL_FROM_RGB8(r, g, b);
+                    palette[i] = PICO_SCANVIDEO_PIXEL_FROM_RGB8(b, g, r); // TODO BOB can I just swap these and not have to bit shift to get bgr colors?
                 }
             }
             next_pal = -1;
@@ -1050,6 +1041,11 @@ void __no_inline_not_in_flash_func(new_frame_stuff)() {
 }
 
 void __scratch_x("scanlines") fill_scanlines() {
+    frame++;
+    if (display_video_type != VIDEO_TYPE_SAVING) {
+        // this stuff is large (so in flash) and not needed in save move
+        new_frame_init_overlays_palette_and_wipe();
+    }
     // st7789_fill(0x5555);
     st7789_set_cursor(0,0);
 
@@ -1082,7 +1078,9 @@ void __scratch_x("scanlines") fill_scanlines() {
     interp_updated = 0;
 #endif
 
-    struct scanvideo_scanline_buffer *buffer; // just to get compiler to stop complaining
+    // st7789_fill(0x0000);
+    // struct scanvideo_scanline_buffer *buffer; // just to get compiler to stop complaining
+    uint16_t buffer[SCREENWIDTH];
     
     for (int scanline = 0; scanline < DOOM_HEIGHT; scanline++) { // BOB: used to be buffer. used to define scanline buffers above
         DEBUG_PINS_SET(scanline_copy, 1);
@@ -1091,53 +1089,51 @@ void __scratch_x("scanlines") fill_scanlines() {
             // assert (buffer->data < text_scanline_buffer_start || buffer->data >= text_scanline_buffer_start + TEXT_SCANLINE_BUFFER_TOTAL_WORDS);
             switch(display_video_type) {
                 case VIDEO_TYPE_NONE :
-                    scanline_func_none(scanline);
+                    scanline_func_none(buffer, scanline);
                     break;
                 case VIDEO_TYPE_SINGLE : 
-                    scanline_func_single(scanline);
+                    scanline_func_single(buffer, scanline);
                     break;
                 case VIDEO_TYPE_DOUBLE :
-                    scanline_func_double(scanline);
+                    scanline_func_double(buffer,scanline);
                     break;
                 case VIDEO_TYPE_WIPE :
-                    scanline_func_wipe(scanline);
+                    scanline_func_wipe(buffer, scanline);
                     break;
                 default: 
                     // st7789_fill(0xffff);
                     // scanline_func_double(scanline);
                     break;
             }
-            // scanline_func_double(scanline);
-            // scanline_funcs[display_video_type](scanline);
-            // if (display_video_type >= FIRST_VIDEO_TYPE_WITH_OVERLAYS) { // TODO BOB REINSTATE WHOLE BLOCK HERE
-            //     assert(scanline < count_of(vpatchlists->vpatch_starters));
-            //     int prev = 0;
-            //     for (int vp = vpatchlists->vpatch_starters[scanline]; vp;) {
-            //         int next = vpatchlists->vpatch_next[vp];
-            //         while (vpatchlists->vpatch_next[prev] && vpatchlists->vpatch_next[prev] < vp) {
-            //             prev = vpatchlists->vpatch_next[prev];
-            //         }
-            //         assert(prev != vp);
-            //         assert(vpatchlists->vpatch_next[prev] != vp);
-            //         vpatchlists->vpatch_next[vp] = vpatchlists->vpatch_next[prev];
-            //         vpatchlists->vpatch_next[prev] = vp;
-            //         prev = vp;
-            //         vp = next;
-            //     }
-            //     vpatchlist_t *overlays = vpatchlists->overlays[display_overlay_index];
-            //     prev = 0;
-            //     for (int vp = vpatchlists->vpatch_next[prev]; vp; vp = vpatchlists->vpatch_next[prev]) {
-            //         patch_t *patch = resolve_vpatch_handle(overlays[vp].entry.patch_handle);
-            //         int yoff = scanline - overlays[vp].entry.y;
-            //         if (yoff < vpatch_height(patch)) {
-            //             vpatchlists->vpatch_doff[vp] = draw_vpatch((uint16_t*)(buffer->data + 1), patch, &overlays[vp],
-            //                                                        vpatchlists->vpatch_doff[vp]);
-            //             prev = vp;
-            //         } else {
-            //             vpatchlists->vpatch_next[prev] = vpatchlists->vpatch_next[vp];
-            //         }
-            //     }
-            // }
+            if (display_video_type >= FIRST_VIDEO_TYPE_WITH_OVERLAYS) { // TODO BOB REINSTATE WHOLE BLOCK HERE
+                assert(scanline < count_of(vpatchlists->vpatch_starters));
+                int prev = 0;
+                for (int vp = vpatchlists->vpatch_starters[scanline]; vp;) {
+                    int next = vpatchlists->vpatch_next[vp];
+                    while (vpatchlists->vpatch_next[prev] && vpatchlists->vpatch_next[prev] < vp) {
+                        prev = vpatchlists->vpatch_next[prev];
+                    }
+                    assert(prev != vp);
+                    assert(vpatchlists->vpatch_next[prev] != vp);
+                    vpatchlists->vpatch_next[vp] = vpatchlists->vpatch_next[prev];
+                    vpatchlists->vpatch_next[prev] = vp;
+                    prev = vp;
+                    vp = next;
+                }
+                vpatchlist_t *overlays = vpatchlists->overlays[display_overlay_index];
+                prev = 0;
+                for (int vp = vpatchlists->vpatch_next[prev]; vp; vp = vpatchlists->vpatch_next[prev]) {
+                    patch_t *patch = resolve_vpatch_handle(overlays[vp].entry.patch_handle);
+                    int yoff = scanline - overlays[vp].entry.y;
+                    if (yoff < vpatch_height(patch)) {
+                        vpatchlists->vpatch_doff[vp] = draw_vpatch((uint16_t*)(buffer), patch, &overlays[vp],
+                                                                   vpatchlists->vpatch_doff[vp]);
+                        prev = vp;
+                    } else {
+                        vpatchlists->vpatch_next[prev] = vpatchlists->vpatch_next[vp];
+                    }
+                }
+            }
             // uint16_t *p = (uint16_t *) buffer->data; // TODO BOB should I just chuck this?
             // p[0] = video_doom_offset_raw_run;
             // p[1] = p[2];
@@ -1145,10 +1141,18 @@ void __scratch_x("scanlines") fill_scanlines() {
             // buffer->data[SCREENWIDTH / 2 + 1] = video_doom_offset_raw_1p;
             // buffer->data[SCREENWIDTH / 2 + 2] = video_doom_offset_end_of_scanline_skip_ALIGN;
             // buffer->data_used = SCREENWIDTH / 2 + 3;
+            // st7789_set_cursor(0,scanline-100);
+            for (int x = 0; x < SCREENWIDTH; x++) {
+                st7789_put(buffer[x]);
+            }
+            // for (int x = 0; x < SCREENWIDTH; x++) {
+            //     st7789_put(0xffff);
+            // }
+
             DEBUG_PINS_CLR(scanline_copy, 1);
         } else {
 #if SUPPORT_TEXT
-            // render_text_mode_scanline(buffer, scanline); // TODO BOB REINSTATE
+            render_text_mode_scanline(buffer, scanline); // TODO BOB REINSTATE
 #else
             // memset(buffer->data + 1, 0, SCREENWIDTH * 2); // TODO BOB REINSTATE
             // uint16_t *p = (uint16_t *) buffer->data; // TODO BOB should I just chuck this?
@@ -1309,7 +1313,7 @@ void I_Endoom(byte *endoom_data) {
     assert(size >=TEXT_SCANLINE_BUFFER_TOTAL_WORDS * 4 + 80*25*2 + 4096);
     text_screen_cpy = wa;
     text_font_cpy = text_screen_cpy + 80 * 25 * 2;
-    text_scanline_buffer_start = (uint32_t *) (text_font_cpy + 4096);
+    text_scanline_buffer_start = (uint16_t *) (text_font_cpy + 4096); // TODO BOB I changed this from 32 to 16
 #if 0
     static_assert(sizeof(normal_font_data) == 4096, "");
     memcpy(text_font_cpy, normal_font_data, sizeof(normal_font_data));
