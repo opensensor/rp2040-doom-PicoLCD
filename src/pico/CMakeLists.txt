@@ -9,6 +9,7 @@ target_sources(common_pico INTERFACE
         ${CMAKE_CURRENT_LIST_DIR}/stubs.c
 
         ${CMAKE_CURRENT_LIST_DIR}/i_picosound.c
+        ${CMAKE_CURRENT_LIST_DIR}/screen.c
 )
 if (PICO_ON_DEVICE)
     target_sources(common_pico INTERFACE

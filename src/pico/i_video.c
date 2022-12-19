@@ -52,6 +52,7 @@
 #include "picodoom.h"
 #include "video_doom.pio.h"
 #include "image_decoder.h"
+#include "screen.h"
 #if PICO_ON_DEVICE
 #include "hardware/dma.h"
 #include "hardware/structs/xip_ctrl.h"
@@ -69,32 +70,6 @@ typedef struct __packed {
 #define TXT_SCREEN_W 80
 #include "fonts/normal.h"
 
-#if ST7789
-#include <stdlib.h>
-#include "pico/st7789.h"
-
-// lcd configuration
-const struct st7789_config lcd_config = {
-    .spi      = PICO_DEFAULT_SPI_INSTANCE,
-    .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
-    .gpio_clk = PICO_DEFAULT_SPI_SCK_PIN,
-    .gpio_cs  = PICO_DEFAULT_SPI_CSN_PIN,
-    .gpio_dc  = 20,
-    .gpio_rst = 21,
-    .gpio_bl  = 22,
-};
-
-#define MEMORY_WIDTH 320
-#define MEMORY_HEIGHT 240
-
-#define LCD_WIDTH 160
-#define LCD_HEIGHT 120
-
-// TODO find wherever these are already stored
-#define DOOM_WIDTH 320
-#define DOOM_HEIGHT 200
-
-#endif
 
 static uint16_t ega_colors[] = {
     PICO_SCANVIDEO_PIXEL_FROM_RGB8(0x00, 0x00, 0x00),         // 0: Black
@@ -1046,43 +1021,16 @@ void __scratch_x("scanlines") fill_scanlines() {
         // this stuff is large (so in flash) and not needed in save move
         new_frame_init_overlays_palette_and_wipe();
     }
-    // st7789_fill(0x5555);
+
     st7789_set_cursor(0,0);
 
-    // st7789_fill(0x5555);
-    // for (int y = 0; y < DOOM_HEIGHT; y = y + (DOOM_HEIGHT / LCD_HEIGHT)){
-    //     st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (y / (DOOM_HEIGHT / LCD_HEIGHT))); // kek
-        
-    //     for (int x = 0; x < DOOM_WIDTH; x = x + (DOOM_WIDTH / LCD_WIDTH)) {
-    //         const uint8_t* source_color = frame_buffer[display_frame_index] + y * SCREENWIDTH + x;
-    //         uint16_t new_color = palette[*source_color];
-    //         new_color = ((0b1111100000000000 & new_color) >> 11) | (0b0000011111100000 & new_color) | ((0b0000000000011111 & new_color) << 11);
-    //         // uint16_t new_color = new_color | 0b11111 START HERE red and blue are swapped
-    //         // color goes RrrrrGgggggBbbbb, caps are MSB
-    //         // uint16_t new_color_arr[] = { 0b0000000000100000 };
-    //         uint16_t new_color_arr[] = { new_color };
-
-    //         // Pack the 5:6:5 components into a uint16_t and return it
-    //         // const uint16_t new_color[] = {   };
-    //         // const uint16_t new_color[] = {  (*source_color) };
-    //         st7789_write(new_color_arr, sizeof(new_color_arr));
-    //     }
-    //     // st7789_write(frame_buffer[display_frame_index] + scanline * SCREENWIDTH, sizeof(uint8_t) * 20);
-    // }
-    // new_frame_stuff();
-    // return;
-
-    // sleep_ms(1000);
 #if USE_INTERP
     need_save = interp_in_use;
     interp_updated = 0;
 #endif
-
-    // st7789_fill(0x0000);
-    // struct scanvideo_scanline_buffer *buffer; // just to get compiler to stop complaining
     uint16_t buffer[SCREENWIDTH];
     
-    for (int scanline = 0; scanline < DOOM_HEIGHT; scanline++) { // BOB: used to be buffer. used to define scanline buffers above
+    for (int scanline = 0; scanline < DOOM_HEIGHT; scanline++){
         DEBUG_PINS_SET(scanline_copy, 1);
         if (display_video_type != VIDEO_TYPE_TEXT) {
             // we don't have text mode -> normal transition yet, but we may for network game, so leaving this here - we would need to put the buffer pointers back
@@ -1101,8 +1049,6 @@ void __scratch_x("scanlines") fill_scanlines() {
                     scanline_func_wipe(buffer, scanline);
                     break;
                 default: 
-                    // st7789_fill(0xffff);
-                    // scanline_func_double(scanline);
                     break;
             }
             if (display_video_type >= FIRST_VIDEO_TYPE_WITH_OVERLAYS) { // TODO BOB REINSTATE WHOLE BLOCK HERE
@@ -1134,20 +1080,7 @@ void __scratch_x("scanlines") fill_scanlines() {
                     }
                 }
             }
-            // uint16_t *p = (uint16_t *) buffer->data; // TODO BOB should I just chuck this?
-            // p[0] = video_doom_offset_raw_run;
-            // p[1] = p[2];
-            // p[2] = SCREENWIDTH - 3;
-            // buffer->data[SCREENWIDTH / 2 + 1] = video_doom_offset_raw_1p;
-            // buffer->data[SCREENWIDTH / 2 + 2] = video_doom_offset_end_of_scanline_skip_ALIGN;
-            // buffer->data_used = SCREENWIDTH / 2 + 3;
-            // st7789_set_cursor(0,scanline-100);
-            for (int x = 0; x < SCREENWIDTH; x++) {
-                st7789_put(buffer[x]);
-            }
-            // for (int x = 0; x < SCREENWIDTH; x++) {
-            //     st7789_put(0xffff);
-            // }
+            I_handleScanline(buffer, scanline);
 
             DEBUG_PINS_CLR(scanline_copy, 1);
         } else {
@@ -1225,11 +1158,7 @@ static void core1() {
 void I_InitGraphics(void)
 {
 
-#if ST7789
-    // width and height only come into play for fills so let's just pass the memory size instead of LCD size
-    st7789_init(&lcd_config, MEMORY_WIDTH, MEMORY_HEIGHT);
-    st7789_fill(0xffff);
-#endif
+    I_initScreen();
 
     stbar = resolve_vpatch_handle(VPATCH_STBAR);
     sem_init(&render_frame_ready, 0, 2);
