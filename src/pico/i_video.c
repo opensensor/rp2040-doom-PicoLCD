@@ -1022,14 +1022,13 @@ void __scratch_x("scanlines") fill_scanlines() {
         new_frame_init_overlays_palette_and_wipe();
     }
 
-    st7789_set_cursor(0,0);
 
 #if USE_INTERP
     need_save = interp_in_use;
     interp_updated = 0;
 #endif
     uint16_t buffer[SCREENWIDTH];
-    
+    I_handleFrameStart(frame);    
     for (int scanline = 0; scanline < DOOM_HEIGHT; scanline++){
         DEBUG_PINS_SET(scanline_copy, 1);
         if (display_video_type != VIDEO_TYPE_TEXT) {

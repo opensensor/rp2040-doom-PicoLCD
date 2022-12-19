@@ -224,3 +224,18 @@ void st7789_vertical_scroll(uint16_t row)
     // VSCSAD (37h): Vertical Scroll Start Address of RAM 
     st7789_cmd(0x37, data, sizeof(data));
 }
+
+void st7789_partial_area(uint16_t start, uint16_t end)
+{
+    uint8_t data[] = {
+        (start >> 8) & 0xff,
+        start & 0x00ff,
+        (end >> 8) & 0xff,
+        end & 0x00ff,
+    };
+
+    // PTLAR (30h): Partial Area
+    st7789_cmd(0x30, data, sizeof(data));
+    // PTLON (12h): Partial Display Mode On
+    st7789_cmd(0x12, NULL, 0);
+}

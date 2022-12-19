@@ -41,6 +41,8 @@ void I_initScreen(void) {
     // width and height only come into play for fills so let's just pass the memory size instead of LCD size
     st7789_init(&lcd_config, MEMORY_WIDTH, MEMORY_HEIGHT);
     st7789_fill(0x0000);
+
+    // st7789_partial_area(80,240);
 #elif LILYGO_TTGO
     gpio_init(22);
     gpio_set_dir(22, GPIO_OUT);
@@ -51,26 +53,44 @@ void I_initScreen(void) {
 #endif
 }
 
-// void I_handleFrame(uint8_t frame) {
-//     // no-op for now
-// }
 uint16_t downscaled_line[DOOM_WIDTH/2];
+
+void I_handleFrameStart(uint8_t frame) {
+#if ST7789 || LILYGO_TTGO
+    // st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2,(MEMORY_HEIGHT - LCD_HEIGHT) / 2);
+#endif
+}
 
 void I_handleScanline(uint16_t *line, int scanline) {
 #if ST7789 || LILYGO_TTGO
-    if (scanline % 2 == 0) {
-        return;
-    }
+    // if (scanline < 20) {
+        // return;
+    // }
 
     for (uint8_t i=0; i < DOOM_WIDTH/2; i++) {
         downscaled_line[i] = line[i*2];
     }
     // st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline / (MEMORY_HEIGHT / LCD_HEIGHT)));
-    st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline / 2));
+    // if (scanline % 2 == 0) {
+        st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline/2));
+    // }
+    // st7789_set_cursor(0, scanline);
     // st7789_write(downscaled_line, sizeof(downscaled_line));
-    for (int x = 0; x < DOOM_WIDTH/2; x++) {
-        st7789_put(downscaled_line[x]);
-        // st7789_write(&downscaled_line[x], sizeof(uint16_t)*8);
+    for (int x = 0; x < DOOM_WIDTH; x++) {
+        // st7789_put(downscaled_line[x]);
+        // st7789_write(&line[x], sizeof(uint16_t));
     }
+    // st7789_write(line, 639);
+    // if (scanline % 2 == 1) {
+        // uint16_t black[DOOM_WIDTH/4] = {0};
+        // uint16_t white[DOOM_WIDTH/4] = {0xffff};
+        // st7789_write(black, 80);
+        // st7789_write(downscaled_line, 320);
+        // st7789_set_cursor(0,100);
+        st7789_write(downscaled_line, 320);
+        // st7789_write(black, 160);
+        // st7789_write(black, 80);
+
+    // }
 #endif
 }

@@ -41,6 +41,7 @@
 #define DOOM_HEIGHT SCREENHEIGHT
 
 void I_initScreen(void);
+void I_handleFrameStart(uint8_t frame);
 void I_handleScanline(uint16_t *line, int scanline);
 
 #endif

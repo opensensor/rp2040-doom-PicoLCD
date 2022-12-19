@@ -26,5 +26,6 @@ void st7789_put(uint16_t pixel);
 void st7789_fill(uint16_t pixel);
 void st7789_set_cursor(uint16_t x, uint16_t y);
 void st7789_vertical_scroll(uint16_t row);
+void st7789_partial_area(uint16_t start, uint16_t end);
 
 #endif
