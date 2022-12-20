@@ -8,7 +8,6 @@ and unstructured wish list of features and improvements. The bug tracker
 * Get working on https://github.com/01Space/RP2040-0.42LCD ?
 * render whole lines via blocking st7789_write
 * remove all TODOs
-* find replacement already-defined macros for DOOM_HEIGHT and DOOM_WIDTH
 * test sound
 * make some modifications to the readme:
   * explain what I changed and why

@@ -1,6 +1,9 @@
 {
     "files.associations": {
         "stdio.h": "c",
-        "picodoom.h": "c"
+        "picodoom.h": "c",
+        "st7789_240_135.h": "c",
+        "screen.h": "c",
+        "lilygo_ttgo.h": "c"
     }
 }

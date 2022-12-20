@@ -1,25 +1,6 @@
-#include "screen.h"
+#include "lilygo_ttgo.h"
 
-#if ST7789
-const struct st7789_config lcd_config = {
-    .spi      = PICO_DEFAULT_SPI_INSTANCE,
-    .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
-    .gpio_clk = PICO_DEFAULT_SPI_SCK_PIN,
-    .gpio_cs  = PICO_DEFAULT_SPI_CSN_PIN,
-    .gpio_dc  = 20,
-    .gpio_rst = 21,
-    .gpio_bl  = 22,
-};
-
-#define MEMORY_WIDTH 320
-#define MEMORY_HEIGHT 240
-
-#define LCD_WIDTH 160
-#define LCD_HEIGHT 120
-
-
-#elif LILYGO_TTGO
-const struct st7789_config lcd_config = {
+static const struct st7789_config lcd_config = {
     .spi      = PICO_DEFAULT_SPI_INSTANCE,
     .gpio_din = 3,
     .gpio_clk = 2,
@@ -34,35 +15,23 @@ const struct st7789_config lcd_config = {
 
 #define LCD_WIDTH 160
 #define LCD_HEIGHT 120
-#endif
 
-void I_initScreen(void) {
-#if ST7789
-    // width and height only come into play for fills so let's just pass the memory size instead of LCD size
-    st7789_init(&lcd_config, MEMORY_WIDTH, MEMORY_HEIGHT);
-    st7789_fill(0x0000);
-
-    // st7789_partial_area(80,240);
-#elif LILYGO_TTGO
+void lilygo_ttgo_initScreen(void) {
     gpio_init(22);
     gpio_set_dir(22, GPIO_OUT);
     gpio_put(22, 1);
     // width and height only come into play for fills so let's just pass the memory size instead of LCD size
     st7789_init(&lcd_config, MEMORY_WIDTH, MEMORY_HEIGHT);
     st7789_fill(0x0000);
-#endif
 }
 
-uint16_t downscaled_line[DOOM_WIDTH/2];
+static uint16_t downscaled_line[DOOM_WIDTH/2];
 
-void I_handleFrameStart(uint8_t frame) {
-#if ST7789 || LILYGO_TTGO
+void lilygo_ttgo_handleFrameStart(uint8_t frame) {
     // st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2,(MEMORY_HEIGHT - LCD_HEIGHT) / 2);
-#endif
 }
 
-void I_handleScanline(uint16_t *line, int scanline) {
-#if ST7789 || LILYGO_TTGO
+void lilygo_ttgo_handleScanline(uint16_t *line, int scanline) {
     // if (scanline < 20) {
         // return;
     // }
@@ -92,5 +61,4 @@ void I_handleScanline(uint16_t *line, int scanline) {
         // st7789_write(black, 80);
 
     // }
-#endif
 }

@@ -7,7 +7,10 @@ else()
 endif()
 
 add_subdirectory(adpcm-xq)
+
+# screens
 add_subdirectory(pico_st7789)
+add_subdirectory(pico_ssd1306)
 
 foreach(SUBDIR ${BINARIES})
     add_subdirectory("${SUBDIR}")
@@ -496,7 +499,11 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
             -Wno-format-truncation)
     target_compile_definitions(doom_tiny${SUFFIX} PRIVATE
         DOOM_TINY=1
-        ST7789=1
+        
+        # ST7789_240_135=1
+        SSD1306_70_40=1
+        
+        SUPPORT_OVERLAYS=0
         EMU8950_SLOT_RENDER=1
 
         SHRINK_MOBJ=1 # may break saved games
@@ -575,8 +582,9 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
         NO_IERROR=1
     )
     if (PICO_ON_DEVICE)
-        target_link_libraries(doom_tiny${SUFFIX} PRIVATE hardware_spi)
-        target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_st7789)
+        # target_link_libraries(doom_tiny${SUFFIX} PRIVATE hardware_spi)
+        target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_st7789 hardware_spi)
+        target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_ssd1306)
         target_compile_options(doom_tiny${SUFFIX} PRIVATE -fno-common -fdata-sections -Wl,--sort-section=alignment)
         target_compile_definitions(doom_tiny${SUFFIX} PRIVATE
                 NO_ZONE_DEBUG=1
