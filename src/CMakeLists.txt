@@ -500,8 +500,8 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
     target_compile_definitions(doom_tiny${SUFFIX} PRIVATE
         DOOM_TINY=1
         
-        # ST7789_240_135=1
-        SSD1306_70_40=1
+        ST7789_240_135=1
+        # SSD1306_70_40=1
         
         SUPPORT_OVERLAYS=0
         EMU8950_SLOT_RENDER=1
