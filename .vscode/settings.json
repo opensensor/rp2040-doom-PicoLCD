@@ -4,6 +4,7 @@
         "picodoom.h": "c",
         "st7789_240_135.h": "c",
         "screen.h": "c",
-        "lilygo_ttgo.h": "c"
+        "lilygo_ttgo.h": "c",
+        "shared.h": "c"
     }
 }

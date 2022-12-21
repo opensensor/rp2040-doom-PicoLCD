@@ -19,7 +19,7 @@ void I_initScreen(void) {
 #elif LILYGO_TTGO
     lilygo_ttgo_initScreen();
 #elif SSD1306_70_40
-    ssd1306_70_40 = ssd1306_70_40_initScreen();
+    ssd1306_70_40_initScreen();
 #endif
 }
 
@@ -29,7 +29,10 @@ void I_handleFrameStart(uint8_t frame) {
     st7789_240_135_handleFrameStart(frame);
 #elif LILYGO_TTGO
     lilygo_ttgo_handleFrameStart(frame);
+#elif SSD1306_70_40
+    ssd1306_70_40_handleFrameStart(frame);
 #endif
+
 }
 
 void I_handleScanline(uint16_t *line, int scanline) {
@@ -37,9 +40,14 @@ void I_handleScanline(uint16_t *line, int scanline) {
     st7789_240_135_handleScanline(line, scanline);
 #elif LILYGO_TTGO
     lilygo_ttgo_handleScanline(line, scanline);
+#elif SSD1306_70_40
+    ssd1306_70_40_handleScanline(line, scanline);
 #endif
 }
 
 void I_handleFrameEnd(uint8_t frame) {
+#if SSD1306_70_40
+    ssd1306_70_40_handleFrameEnd(frame);
+#endif
     gpio_put(PICO_DEFAULT_LED_PIN, 1);
 }

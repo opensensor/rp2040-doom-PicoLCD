@@ -13,9 +13,12 @@ static const struct st7789_config lcd_config = {
 #define MEMORY_WIDTH 320
 #define MEMORY_HEIGHT 240
 
-#define LCD_WIDTH 160
-#define LCD_HEIGHT 120
+#define LCD_WIDTH 240
+#define LCD_HEIGHT 135
 
+static uint8_t current_downsampled_row = 0;
+static uint16_t downsampled_row[DOWNSAMPLING_FACTOR_OUT_OF_100 / 100][DOWNSAMPLED_WIDTH]; // I have no idea why I can't do (int)DOWNSAMPLED_WIDTH
+static uint16_t downsampled_column[DOWNSAMPLING_FACTOR_OUT_OF_100 / 100];
 
 void st7789_240_135_initScreen(void) {
     // width and height only come into play for fills so let's just pass the memory size instead of LCD size
@@ -25,40 +28,37 @@ void st7789_240_135_initScreen(void) {
     // st7789_partial_area(80,240);
 }
 
-static uint16_t downscaled_line[DOOM_WIDTH/2];
-
 void st7789_240_135_handleFrameStart(uint8_t frame) {
-    // st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2,(MEMORY_HEIGHT - LCD_HEIGHT) / 2);
+    current_downsampled_row = 0;
+}
+
+void downsample_y_and_blit(int scanline) {
+    st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100));
+    for (uint16_t x = 0; x < DOWNSAMPLED_WIDTH; x++) {
+        for (uint8_t y = 0; y < (DOWNSAMPLING_FACTOR_OUT_OF_100 / 100); y++) {
+            downsampled_column[y] = downsampled_row[y][x];
+        }
+
+        st7789_put(downsample_pixel_group(downsampled_column));
+    }
+
+    current_downsampled_row = 0;
 }
 
 void st7789_240_135_handleScanline(uint16_t *line, int scanline) {
-    // if (scanline < 20) {
-        // return;
+    // downsample_line(line, downsampled_row[current_downsampled_row++]);
+    
+    // st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100));
+
+    // for (int x = 0; x < DOWNSAMPLED_WIDTH; x++) {
+    //     st7789_put(downsampled_row[0][x]);
+    //     // st7789_write(&line[x], sizeof(uint16_t));
     // }
 
-    for (uint8_t i=0; i < DOOM_WIDTH/2; i++) {
-        downscaled_line[i] = line[i*2];
-    }
-    // st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline / (MEMORY_HEIGHT / LCD_HEIGHT)));
-    // if (scanline % 2 == 0) {
-        st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline/2));
-    // }
-    // st7789_set_cursor(0, scanline);
-    // st7789_write(downscaled_line, sizeof(downscaled_line));
-    for (int x = 0; x < DOOM_WIDTH; x++) {
-        // st7789_put(downscaled_line[x]);
-        // st7789_write(&line[x], sizeof(uint16_t));
-    }
-    // st7789_write(line, 639);
-    // if (scanline % 2 == 1) {
-        // uint16_t black[DOOM_WIDTH/4] = {0};
-        // uint16_t white[DOOM_WIDTH/4] = {0xffff};
-        // st7789_write(black, 80);
-        // st7789_write(downscaled_line, 320);
-        // st7789_set_cursor(0,100);
-        st7789_write(downscaled_line, 320);
-        // st7789_write(black, 160);
-        // st7789_write(black, 80);
+    downsample_line(line, downsampled_row[current_downsampled_row++]);
+    // current_downsampled_row += 1;
 
-    // }
+    if ((current_downsampled_row * 100) >= DOWNSAMPLING_FACTOR_OUT_OF_100) {
+        downsample_y_and_blit(scanline);
+    } 
 }

@@ -58,8 +58,7 @@
 #include "hardware/structs/xip_ctrl.h"
 #endif
 
-#define YELLOW_SUBMARINE 0
-#define SUPPORT_TEXT 0
+#define SUPPORT_TEXT 1
 #if SUPPORT_TEXT
 typedef struct __packed {
     const char * const name;

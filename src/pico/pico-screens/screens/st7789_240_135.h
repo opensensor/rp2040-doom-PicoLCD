@@ -15,8 +15,8 @@
 #define MEMORY_WIDTH 320
 #define MEMORY_HEIGHT 240
 
-#define LCD_WIDTH 160
-#define LCD_HEIGHT 120
+// #define LCD_WIDTH 160
+// #define LCD_HEIGHT 120
 
 void st7789_240_135_initScreen(void);
 void st7789_240_135_handleFrameStart(uint8_t frame);

@@ -503,7 +503,7 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
         ST7789_240_135=1
         # SSD1306_70_40=1
         
-        SUPPORT_OVERLAYS=0
+        SUPPORT_OVERLAYS=1
         EMU8950_SLOT_RENDER=1
 
         SHRINK_MOBJ=1 # may break saved games
