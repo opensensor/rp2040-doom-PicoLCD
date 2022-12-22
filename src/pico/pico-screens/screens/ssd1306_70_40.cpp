@@ -1,5 +1,7 @@
 #include "ssd1306_70_40.hpp"
 #include "pico/ssd1306.h"
+#include "shared.h"
+
 
     // .spi      = PICO_DEFAULT_SPI_INSTANCE,
     // .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
@@ -14,6 +16,9 @@
 
 extern "C" {
 
+
+// extern uint16_t nearestNeighborDownsamplePixelGroup(uint16_t *src);
+// extern void nearestNeighborHandleDownsampling(uint16_t *src, uint16_t *dest);
 
     static SSD1306* display;
 
@@ -31,38 +36,42 @@ extern "C" {
         // display->draw_pixel(135, 120, SSD1306_COLOR_ON);
         // display->draw_pixel(40, 70, SSD1306_COLOR_ON);
 
-        display->update();
+        // display->update();
 
-        sleep_ms(1000);
+        // sleep_ms(1000);
         // return display;
     }
 
     void ssd1306_70_40_handleFrameStart(uint8_t frame) {
-        // display->clear();
+        clearDownsampleBuffers();
     }
 
-    void ssd1306_70_40_handleScanline(uint16_t *line, int scanline) {
-        if (scanline % 5 != 0) {
-            return;
+    SSD1306PixelColor colorToMonochrome(uint16_t pixel) {
+        uint8_t r = pixel & 0b1111100000000000 >> 11;
+        uint8_t g = pixel & 0b0000011111100000 >> 5;
+        uint8_t b = pixel & 0b0000000000011111;
+
+        uint8_t grayscale = (21 * r + 72 * g + 7 * b) / 100;
+        // stg ternarys aren't working or something
+        if (grayscale > 5) {
+            return SSD1306_COLOR_ON;
         }
 
-        for (uint8_t x = 0; x < SCREENWIDTH/5; x++) {
-            uint8_t r = line[x*5] & 0b1111100000000000 >> 11;
-            uint8_t g = line[x*5] & 0b0000011111100000 >> 5;
-            uint8_t b = line[x*5] & 0b0000000000011111;
+        return SSD1306_COLOR_OFF;
+    }
 
-            uint8_t grayscale = (21 * r + 72 * g + 7 * b) / 100;
-
-            SSD1306PixelColor color;
-            if (grayscale > 5) {
-                color = SSD1306_COLOR_ON;
-            } else {
-                color = SSD1306_COLOR_OFF;
-            }
-            // The pixel should be rendered to monochrome if the grayscale value is less than or equal to 127.
-            display->draw_pixel(START_X + x, START_Y + scanline/5, color);
+    void ssd1306_70_40_downsample_y_and_blit(uint16_t* downsampled_line, int scanline) {
+        for (uint16_t x = 0; x < DOWNSAMPLED_WIDTH; x++) {
+            uint16_t downsampled_pixel = downsampled_line[x];
+            SSD1306PixelColor color = colorToMonochrome(downsampled_pixel);
+            display->draw_pixel(START_X + x, START_Y + scanline * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100, color);
         }
         display->update();
+    }
+
+
+    void ssd1306_70_40_handleScanline(uint16_t *line, int scanline) {
+        nearestNeighborHandleDownsampling(line, scanline, ssd1306_70_40_downsample_y_and_blit);
     }
 
     void ssd1306_70_40_handleFrameEnd(uint8_t frame) {

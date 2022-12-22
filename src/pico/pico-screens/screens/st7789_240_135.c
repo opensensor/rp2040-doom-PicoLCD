@@ -16,10 +16,6 @@ static const struct st7789_config lcd_config = {
 #define LCD_WIDTH 240
 #define LCD_HEIGHT 135
 
-static uint8_t current_downsampled_row = 0;
-static uint16_t downsampled_row[DOWNSAMPLING_FACTOR_OUT_OF_100 / 100][DOWNSAMPLED_WIDTH]; // I have no idea why I can't do (int)DOWNSAMPLED_WIDTH
-static uint16_t downsampled_column[DOWNSAMPLING_FACTOR_OUT_OF_100 / 100];
-
 void st7789_240_135_initScreen(void) {
     // width and height only come into play for fills so let's just pass the memory size instead of LCD size
     st7789_init(&lcd_config, MEMORY_WIDTH, MEMORY_HEIGHT);
@@ -29,36 +25,19 @@ void st7789_240_135_initScreen(void) {
 }
 
 void st7789_240_135_handleFrameStart(uint8_t frame) {
-    current_downsampled_row = 0;
+    // we do this in case there's a rounding error and the downsampling code still
+    // needs a row but we've moved on to the next frame
+    clearDownsampleBuffers();
 }
 
-void downsample_y_and_blit(int scanline) {
+void st7789_240_135_blit(uint16_t *downsampled_line, int scanline) {
     st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100));
+    // st7789_write(downsampled_line, sizeof(downsampled_line) * DOWNSAMPLED_WIDTH);
     for (uint16_t x = 0; x < DOWNSAMPLED_WIDTH; x++) {
-        for (uint8_t y = 0; y < (DOWNSAMPLING_FACTOR_OUT_OF_100 / 100); y++) {
-            downsampled_column[y] = downsampled_row[y][x];
-        }
-
-        st7789_put(downsample_pixel_group(downsampled_column));
+        st7789_put(downsampled_line[x]); // TODO reinstate write()
     }
-
-    current_downsampled_row = 0;
 }
 
 void st7789_240_135_handleScanline(uint16_t *line, int scanline) {
-    // downsample_line(line, downsampled_row[current_downsampled_row++]);
-    
-    // st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100));
-
-    // for (int x = 0; x < DOWNSAMPLED_WIDTH; x++) {
-    //     st7789_put(downsampled_row[0][x]);
-    //     // st7789_write(&line[x], sizeof(uint16_t));
-    // }
-
-    downsample_line(line, downsampled_row[current_downsampled_row++]);
-    // current_downsampled_row += 1;
-
-    if ((current_downsampled_row * 100) >= DOWNSAMPLING_FACTOR_OUT_OF_100) {
-        downsample_y_and_blit(scanline);
-    } 
+    areaAverageHandleDownsampling(line, scanline, st7789_240_135_blit);
 }

@@ -5,7 +5,6 @@
 #define __SSD1306_70_40__
 
 #include "shared.h"
-
 #include "pico.h"
 
 #include <stdlib.h>
