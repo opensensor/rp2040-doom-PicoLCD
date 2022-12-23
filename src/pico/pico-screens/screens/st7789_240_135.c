@@ -10,34 +10,27 @@ static const struct st7789_config lcd_config = {
     .gpio_bl  = 22,
 };
 
-#define MEMORY_WIDTH 320
-#define MEMORY_HEIGHT 240
-
-#define LCD_WIDTH 240
-#define LCD_HEIGHT 135
-
 void st7789_240_135_initScreen(void) {
     // width and height only come into play for fills so let's just pass the memory size instead of LCD size
     st7789_init(&lcd_config, MEMORY_WIDTH, MEMORY_HEIGHT);
     st7789_fill(0x0000);
-
-    // st7789_partial_area(80,240);
 }
 
 void st7789_240_135_handleFrameStart(uint8_t frame) {
-    // we do this in case there's a rounding error and the downsampling code still
-    // needs a row but we've moved on to the next frame
-    clearDownsampleBuffers();
+    nearestNeighborHandleFrameStart();
 }
 
 void st7789_240_135_blit(uint16_t *downsampled_line, int scanline) {
-    st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100));
-    // st7789_write(downsampled_line, sizeof(downsampled_line) * DOWNSAMPLED_WIDTH);
+    // st7789_fill(scanline % 2 == 0 ? 0x0000 : 0xffff);
+    st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2 + SCREEN_WIDTH_OFFSET, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline));
+    // st7789_write(downsampled_line, sizeof(downsampled_line) * DOWNSAMPLED_WIDTH/2);
+    
+    // write() has had some issues... use this instead if you are trying to blit less than a full row
     for (uint16_t x = 0; x < DOWNSAMPLED_WIDTH; x++) {
-        st7789_put(downsampled_line[x]); // TODO reinstate write()
+        st7789_put(downsampled_line[x]); 
     }
 }
 
 void st7789_240_135_handleScanline(uint16_t *line, int scanline) {
-    areaAverageHandleDownsampling(line, scanline, st7789_240_135_blit);
+    nearestNeighborHandleDownsampling(line, scanline, st7789_240_135_blit);
 }

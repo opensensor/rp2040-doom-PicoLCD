@@ -1,9 +1,8 @@
 #include "shared.h"
 
-static uint8_t current_downsampled_row = 0;
+// what (downsampled) scanline we are processing right now
+static uint8_t current_downsampled_scanline = 0;
 static uint16_t downsampled_row[DOWNSAMPLED_WIDTH] = {0}; // I have no idea why I can't do (int)DOWNSAMPLED_WIDTH
-
-#define CEILINGED_DOWNSAMPLING_FACTOR ceiling(DOWNSAMPLING_FACTOR_OUT_OF_100, 100)
 
 uint16_t ceiling(uint16_t dividend,uint16_t divisor) {
     return dividend/divisor + (dividend % divisor != 0);
@@ -13,64 +12,85 @@ void clearDownsampleBuffers() {
   memset(downsampled_row, 0, sizeof(downsampled_row[0]) * DOWNSAMPLED_WIDTH);
 }
 
+// TODO use
+uint16_t separateSumAndAveragePixels(uint16_t *pixels, uint8_t length, uint8_t weight) {
+    uint16_t r_sum = 0, g_sum = 0, b_sum = 0;
+    for(uint8_t pixel = 0; pixel < length; pixel++) {
+        r_sum += ((pixels[pixel] & 0b1111100000000000) >> 11);
+        g_sum += ((pixels[pixel] & 0b0000011111100000) >> 5);
+        b_sum += (pixels[pixel] & 0b0000000000011111);
+    }
+
+    uint16_t downsampled_pixel;
+    downsampled_pixel  =   (b_sum / weight)        & 0b0000000000011111;
+    downsampled_pixel |= (((g_sum / weight) << 5)  & 0b0000011111100000);
+    downsampled_pixel |= (((r_sum / weight) << 11) & 0b1111100000000000);
+
+    return downsampled_pixel;
+}
+
 // TODO this picks up trash on the very last run - on a [100] array at 98 we'll check 98 99 100 101
-uint16_t areaAverageDownsamplePixelGroup(uint16_t *src) {
+uint16_t areaAverageDownsamplePixelGroup(uint16_t *src, uint16_t end) {
     uint16_t r_sum = 0, g_sum = 0, b_sum = 0;
 
-    for(uint8_t pixel = 0; pixel < (CEILINGED_DOWNSAMPLING_FACTOR); pixel++) {
+    for(uint8_t pixel = 0; pixel < end; pixel++) {
         r_sum += ((src[pixel] & 0b1111100000000000) >> 11);
         g_sum += ((src[pixel] & 0b0000011111100000) >> 5);
         b_sum += (src[pixel] & 0b0000000000011111);
     }
 
     uint16_t downsampled_pixel;
-    downsampled_pixel  =   (b_sum / CEILINGED_DOWNSAMPLING_FACTOR)        & 0b0000000000011111;
-    downsampled_pixel |= (((g_sum / CEILINGED_DOWNSAMPLING_FACTOR) << 5)  & 0b0000011111100000);
-    downsampled_pixel |= (((r_sum / CEILINGED_DOWNSAMPLING_FACTOR) << 11) & 0b1111100000000000);
+    downsampled_pixel  =   (b_sum / end)        & 0b0000000000011111;
+    downsampled_pixel |= (((g_sum / end) << 5)  & 0b0000011111100000);
+    downsampled_pixel |= (((r_sum / end) << 11) & 0b1111100000000000);
 
     return downsampled_pixel;
 }
 
 void areaAverageDownsampleLine(uint16_t *src, uint16_t *dest) {
     for (uint16_t x = 0; x < DOWNSAMPLED_WIDTH; x++) {
-        // Calculate the range of source pixels to average for this destination pixel
-        uint16_t start = (uint16_t)(x * DOWNSAMPLING_FACTOR_OUT_OF_100 / 100);
-      
-        uint16_t downsampled_pixel = areaAverageDownsamplePixelGroup(&src[start]);
+        uint16_t start = (x * DOWNSAMPLING_FACTOR_OUT_OF_100 / 100);
+        // effectively last_downsample_line but for columns
+        uint16_t end = ((x + 1) * DOWNSAMPLING_FACTOR_OUT_OF_100 - 1) / 100;
+        uint8_t range = end - start;
 
-        uint16_t temp_column[DOWNSAMPLING_FACTOR_OUT_OF_100 / 100+1] = {downsampled_pixel};
+        uint16_t downsampled_pixel = areaAverageDownsamplePixelGroup(&src[start], range);
 
-        // uint8_t r = ((downsampled_pixel & 0b1111100000000000) >> 11) ;
-        // uint8_t g = ((downsampled_pixel & 0b0000011111100000) >> 5) ;
-        // uint8_t b = ( downsampled_pixel & 0b0000000000011111);
+        uint8_t r = ((downsampled_pixel & 0b1111100000000000) >> 11) ;
+        uint8_t g = ((downsampled_pixel & 0b0000011111100000) >> 5) ;
+        uint8_t b = ( downsampled_pixel & 0b0000000000011111);
 
-        // uint16_t averaged_pixel;
-        // averaged_pixel  =   (b * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100)       & 0b0000000000011111;
-        // averaged_pixel |= (((g * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100) << 5)  & 0b0000011111100000);
-        // averaged_pixel |= (((r * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100) << 11) & 0b1111100000000000);
+        uint16_t averaged_pixel;
+        averaged_pixel  =   (b / (range))       & 0b0000000000011111;
+        averaged_pixel |= (((g / (range)) << 5)  & 0b0000011111100000);
+        averaged_pixel |= (((r / (range)) << 11) & 0b1111100000000000);
         
-        // exploiting downsampled_pixel. should maybe do this first-class
-        dest[x] += areaAverageDownsamplePixelGroup(temp_column);
+        dest[x] += averaged_pixel;
     }
 }
 
+void areaAverageHandleFrameStart() {
+    clearDownsampleBuffers();
+    current_downsampled_scanline = 0;
+}
+
+// TODO all broke cuz of switching to current_downsampled_scanline
 void areaAverageHandleDownsampling(uint16_t *src, int scanline, void (*callback)(uint16_t *, int)) {
     areaAverageDownsampleLine(src, downsampled_row);
-    current_downsampled_row++;
+    
+    // this represents the last true scanline the current downsampling line needs to process
+    const uint8_t last_downsample_line = ((current_downsampled_scanline + 1) * DOWNSAMPLING_FACTOR_OUT_OF_100 - 1) / 100;
 
-    // TODO make it handle whole downsample factors too
-    if (current_downsampled_row >= CEILINGED_DOWNSAMPLING_FACTOR) {
-        if (CEILINGED_DOWNSAMPLING_FACTOR == DOWNSAMPLING_FACTOR_OUT_OF_100 / 100) {
-            // we have no need of revisiting scanlines
-            callback(downsampled_row, scanline);
-            current_downsampled_row = 0;
-            clearDownsampleBuffers();
-        } else {
-            callback(downsampled_row, scanline-1);
-            current_downsampled_row = 1;
-            clearDownsampleBuffers();
+     // if floor(current_downsampled_scanline * DOWNSAMPLING_FACTOR) == scanline
+    if (last_downsample_line == scanline) {
+        callback(downsampled_row, current_downsampled_scanline);
+        clearDownsampleBuffers();
+        current_downsampled_scanline++;
 
-            // here's that revisit I was talkin about
+        // this represents the _first_ true scanline the _new_ downsampling line needs to process
+        const uint8_t first_downsample_line = (current_downsampled_scanline * DOWNSAMPLING_FACTOR_OUT_OF_100) / 100;
+
+        if (first_downsample_line == scanline) {
             areaAverageDownsampleLine(src, downsampled_row);
         }
     }
@@ -79,7 +99,7 @@ void areaAverageHandleDownsampling(uint16_t *src, int scanline, void (*callback)
 
 
 
-
+// these could have the same signature, but we have no need of the end of the array
 uint16_t nearestNeighborDownsamplePixelGroup(uint16_t *src) {
     return src[0]; // lol
 }
@@ -87,30 +107,37 @@ uint16_t nearestNeighborDownsamplePixelGroup(uint16_t *src) {
 void nearestNeighborDownsampleLine(uint16_t *src, uint16_t *dest) {
     for (uint16_t x = 0; x < DOWNSAMPLED_WIDTH; x++) {
       // Calculate the range of source pixels to average for this destination pixel
+      // we don't have to calculate the actual window for nearest neighbor, which is nice
       uint16_t start = (uint16_t)((x * DOWNSAMPLING_FACTOR_OUT_OF_100) / 100);
       
       dest[x] = nearestNeighborDownsamplePixelGroup(&src[start]);
     }
 }
 
-void nearestNeighborHandleDownsampling(uint16_t *src, int scanline, void (*callback)(uint16_t *, int)) {
-    // this is all we have to do to downsample by x _and_ y
-    if (current_downsampled_row == 0) {
-        nearestNeighborDownsampleLine(src, downsampled_row);
-    }
-    current_downsampled_row++;
+void nearestNeighborHandleFrameStart() {
+    clearDownsampleBuffers();
+    current_downsampled_scanline = 0;
+}
 
-    if ((current_downsampled_row >= CEILINGED_DOWNSAMPLING_FACTOR) {
-        // if we are on a whole number downsampling factor
-        if (CEILINGED_DOWNSAMPLING_FACTOR == DOWNSAMPLING_FACTOR_OUT_OF_100 / 100) {
-            callback(downsampled_row, scanline);
-            current_downsampled_row = 0;
-            clearDownsampleBuffers();
-        } else {
-            // black banding is displayed if we don't do this
-            callback(downsampled_row, scanline-1);
-            current_downsampled_row = 0;
-            clearDownsampleBuffers();
+// TODO this chooses the last pixel, I want it to choose the first pixel
+// TODO maybe this just returns whenever scanline == first_downsample_line
+void nearestNeighborHandleDownsampling(uint16_t *src, int scanline, void (*callback)(uint16_t *, int)) {
+    nearestNeighborDownsampleLine(src, downsampled_row); // TODO reject if already done
+
+    // this represents the last true scanline the current downsampling line needs to process
+    const uint8_t last_downsample_line = ((current_downsampled_scanline + 1) * DOWNSAMPLING_FACTOR_OUT_OF_100 - 1) / 100;
+
+    // if floor(current_downsampled_scanline * DOWNSAMPLING_FACTOR) == scanline
+    if (last_downsample_line == scanline) {
+        callback(downsampled_row, current_downsampled_scanline);
+        clearDownsampleBuffers();
+        current_downsampled_scanline++;
+
+        // this represents the _first_ true scanline the _new_ downsampling line needs to process
+        const uint8_t first_downsample_line = (current_downsampled_scanline * DOWNSAMPLING_FACTOR_OUT_OF_100) / 100;
+
+        if (first_downsample_line == scanline) {
+            nearestNeighborDownsampleLine(src, downsampled_row);
         }
     } 
 }

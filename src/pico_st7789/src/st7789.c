@@ -82,7 +82,7 @@ void st7789_init(const struct st7789_config* config, uint16_t width, uint16_t he
     st7789_width = width;
     st7789_height = height;
 
-    spi_init(st7789_cfg.spi, 125 * 1000 * 1000);
+    spi_init(st7789_cfg.spi, 133 * 1000 * 1000);
     if (st7789_cfg.gpio_cs > -1) {
         spi_set_format(st7789_cfg.spi, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
     } else {

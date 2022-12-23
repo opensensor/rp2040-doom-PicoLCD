@@ -500,6 +500,7 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
     target_compile_definitions(doom_tiny${SUFFIX} PRIVATE
         DOOM_TINY=1
         
+        # LILYGO_TTGO=1
         ST7789_240_135=1
         # SSD1306_70_40=1
         
@@ -664,7 +665,7 @@ if (PICO_SDK)
         target_link_libraries(doom_tiny_usb PRIVATE tiny_settings pico_cd)
         target_compile_definitions(doom_tiny_usb PRIVATE
                 USB_SUPPORT=1
-                TINY_WAD_ADDR=0x10044000 # ugh tinyusb is >8K currently!!
+                TINY_WAD_ADDR=0x10042000 # ugh tinyusb is >8K currently!!
         )
         add_doom_tiny(_nost_usb render_newhope)
         target_link_libraries(doom_tiny_nost_usb PRIVATE pico_cd)

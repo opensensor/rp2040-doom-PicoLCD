@@ -139,7 +139,7 @@ semaphore_t render_frame_ready, display_frame_freed;
 semaphore_t core1_launch;
 
 uint8_t *text_screen_data;
-static uint16_t *text_scanline_buffer_start; // TODO BOB I changed this from 32 to 16 but I'm not _entirely_ sure that's kosher
+static uint16_t *text_scanline_buffer_start;
 static uint8_t *text_screen_cpy;
 static uint8_t *text_font_cpy;
 
@@ -227,7 +227,7 @@ uint8_t *next_video_scroll;
 uint8_t *video_scroll;
 #endif
 volatile uint8_t wipe_min;
-uint16_t *saved_scanline_buffer_ptrs[PICO_SCANVIDEO_SCANLINE_BUFFER_COUNT]; // TODO BOB I changed this from 32 to 16 but I'm not sure that's kocher
+uint16_t *saved_scanline_buffer_ptrs[PICO_SCANVIDEO_SCANLINE_BUFFER_COUNT]; // Bob: I changed this from 32 to 16 but I'm not sure that's kocher
 
 #pragma GCC push_options
 #if PICO_ON_DEVICE
@@ -750,7 +750,7 @@ void __noinline new_frame_init_overlays_palette_and_wipe() {
                     r += ((r0 - r) * mul) >> 16;
                     g += ((g0 - g) * mul) >> 16;
                     b += ((b0 - b) * mul) >> 16;
-                    palette[i] = PICO_SCANVIDEO_PIXEL_FROM_RGB8(b, g, r); // TODO BOB can I just swap these and not have to bit shift to get bgr colors?
+                    palette[i] = PICO_SCANVIDEO_PIXEL_FROM_RGB8(b, g, r);
                 }
             }
             next_pal = -1;
@@ -890,7 +890,7 @@ void __scratch_x("scanlines") fill_scanlines() {
                 scanline_func_none(buffer, scanline);
                 break;
         }
-        if (display_video_type >= FIRST_VIDEO_TYPE_WITH_OVERLAYS && SUPPORT_OVERLAYS) { // TODO BOB REINSTATE WHOLE BLOCK HERE
+        if (display_video_type >= FIRST_VIDEO_TYPE_WITH_OVERLAYS && SUPPORT_OVERLAYS) {
             handle_overlays(buffer, scanline);
         }
         I_handleScanline(buffer, scanline);
@@ -1007,7 +1007,7 @@ void I_Endoom(byte *endoom_data) {
     assert(size >=TEXT_SCANLINE_BUFFER_TOTAL_WORDS * 4 + 80*25*2 + 4096);
     text_screen_cpy = wa;
     text_font_cpy = text_screen_cpy + 80 * 25 * 2;
-    text_scanline_buffer_start = (uint16_t *) (text_font_cpy + 4096 * 2); // TODO BOB I changed this from 32 to 16 and mul'ed the 4096 by 2
+    text_scanline_buffer_start = (uint16_t *) (text_font_cpy + 4096 * 2); // BOB I changed this from 32 to 16 and mul'ed the 4096 by 2
 #if 0
     static_assert(sizeof(normal_font_data) == 4096, "");
     memcpy(text_font_cpy, normal_font_data, sizeof(normal_font_data));

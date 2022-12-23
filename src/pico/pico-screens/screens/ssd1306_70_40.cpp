@@ -3,6 +3,7 @@
 #include "shared.h"
 
 
+
     // .spi      = PICO_DEFAULT_SPI_INSTANCE,
     // .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
     // .gpio_clk = PICO_DEFAULT_SPI_SCK_PIN,
@@ -16,10 +17,15 @@
 
 extern "C" {
 
-
-// extern uint16_t nearestNeighborDownsamplePixelGroup(uint16_t *src);
-// extern void nearestNeighborHandleDownsampling(uint16_t *src, uint16_t *dest);
-
+    static int16_t dithering_quant_error[DOWNSAMPLED_WIDTH] = {0};
+    // we're doing dithering with only a single line buffer, representing the quant error of the _next_ line as we go through
+    // the current line. However while we're going through the current line, it's still full of the values that line needs
+    // this doesn't cause any issues until we get to the bottom right pixel, which will screw up the next pixel in the current
+    // line. so we keep one extra uint16_t that represents this pixel, with 0 as a guard. it's a great guard, because if
+    // the quant is actually 0, it can be safely ignored.
+     static int16_t bottom_left_dithering_quant_error = 0;
+    // shit we need one for the next pixel too since the downscaled line is in color... 
+    static int16_t next_pixel_dithering_quant_error = 0;
     static SSD1306* display;
 
     void ssd1306_70_40_initScreen(void) {
@@ -43,28 +49,70 @@ extern "C" {
     }
 
     void ssd1306_70_40_handleFrameStart(uint8_t frame) {
-        clearDownsampleBuffers();
+        memset(dithering_quant_error, 0, sizeof(dithering_quant_error));
+        bottom_left_dithering_quant_error = 0;
+        next_pixel_dithering_quant_error = 0;
+        nearestNeighborHandleFrameStart();
     }
 
-    SSD1306PixelColor colorToMonochrome(uint16_t pixel) {
+    uint16_t colorToGreyscale(uint16_t pixel) {
         uint8_t r = pixel & 0b1111100000000000 >> 11;
         uint8_t g = pixel & 0b0000011111100000 >> 5;
         uint8_t b = pixel & 0b0000000000011111;
 
-        uint8_t grayscale = (21 * r + 72 * g + 7 * b) / 100;
-        // stg ternarys aren't working or something
-        if (grayscale > 5) {
+        // I reached these numbers by complete brute force. every formula I tried was way too dark... not sure why
+        uint16_t greyscale = (32 * r + 34 * g + 12 * b) >> 1;
+        if (greyscale < 255) return greyscale;
+        return 255;
+    }
+
+    SSD1306PixelColor greyscaleToColorCodes(uint16_t greyscale) {
+        if (greyscale > 127) {
             return SSD1306_COLOR_ON;
         }
 
         return SSD1306_COLOR_OFF;
     }
 
+    void ditherDownsampledLine(uint16_t *line) {
+        // I've had to be careful about 8 vs 16 when going through lines because 320 doesn't fit in 8
+        // but we will only be dithering downsampled lines
+        // you can just ignore the border pixels to fix off by one errors
+        for (uint8_t x = 1; x < DOWNSAMPLED_WIDTH-1; x++) {
+            int16_t greyscale = colorToGreyscale(line[x]) + next_pixel_dithering_quant_error + dithering_quant_error[x];
+            
+            // for safety's sake
+            next_pixel_dithering_quant_error = 0;
+            dithering_quant_error[x] = 0;
+
+            uint8_t monochrome = greyscale > 127 ? 255 : 0;
+
+            // reassign to line as output
+            line[x] = monochrome;
+
+            int16_t quant_error = (greyscale - monochrome);
+            // >> 4 == / 16
+            // we add the top-right pixel's quant error directly to the next pixel
+            line[x+1] += (quant_error * 7) /16;
+            next_pixel_dithering_quant_error = (quant_error * 3) /16;
+            // here's where that bottom left pixel I was talkin about comes in
+            // we can just straight assign - we zeroed this out earlier. yeah it's double jeopardy so what
+            dithering_quant_error[x] = bottom_left_dithering_quant_error + ((quant_error * 5) /16);
+            bottom_left_dithering_quant_error = quant_error /16;
+        }
+    }
+
     void ssd1306_70_40_downsample_y_and_blit(uint16_t* downsampled_line, int scanline) {
+        // this converts the line to "monochrome" greyscale
+        // ditherDownsampledLine(downsampled_line);
         for (uint16_t x = 0; x < DOWNSAMPLED_WIDTH; x++) {
             uint16_t downsampled_pixel = downsampled_line[x];
-            SSD1306PixelColor color = colorToMonochrome(downsampled_pixel);
-            display->draw_pixel(START_X + x, START_Y + scanline * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100, color);
+            
+            // comment out if using dithering
+            downsampled_pixel = colorToGreyscale(downsampled_pixel);
+
+            SSD1306PixelColor color = greyscaleToColorCodes(downsampled_pixel);
+            display->draw_pixel(START_X + x, START_Y + scanline, color);
         }
         display->update();
     }

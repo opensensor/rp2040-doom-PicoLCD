@@ -13,17 +13,20 @@ extern "C" {
 #define DOOM_HEIGHT SCREENHEIGHT
 
 // here be some chicanery to avoid floats
-#define DOWNSAMPLING_FACTOR_OUT_OF_100 137
+#define DOWNSAMPLING_FACTOR_OUT_OF_100 148
 #define DOWNSAMPLED_WIDTH ((SCREENWIDTH * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100))
 #define DOWNSAMPLED_HEIGHT ((SCREENHEIGHT * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100))
 
+#define DOWNSAMPLING_OFFSET_WIDTH ((SCREENWIDTH - (SCREENWIDTH * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100)) >> 1)
+#define DOWNSAMPLING_OFFSET_HEIGHT ((SCREENHEIGHT - (SCREENHEIGHT * 100 / DOWNSAMPLING_FACTOR_OUT_OF_100)) >> 1)
+
 void clearDownsampleBuffers(void);
 
-uint16_t areaAverageDownsamplePixelGroup(uint16_t *src);
 void areaAverageHandleDownsampling(uint16_t *src, int scanline, void (*callback)(uint16_t *, int));
+void areaAverageHandleFrameStart(void);
 
-uint16_t nearestNeighborDownsamplePixelGroup(uint16_t *src);
 void nearestNeighborHandleDownsampling(uint16_t *src, int scanline, void (*callback)(uint16_t *, int));
+void nearestNeighborHandleFrameStart(void);
 
 #endif
 

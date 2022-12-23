@@ -12,7 +12,7 @@
 
 public end_of_scanline_skip_ALIGN:              ; || jmp end_of_scanline_skip_ALIGN | ignored ||
   ; was 16 but we just discard the reset of the OSR
-  ; so as to also support 8 bit grayscale
+  ; so as to also support 8 bit greyscale
   out  null, 32;
 
 public end_of_scanline_ALIGN:                   ; | jmp end_of_scanline_ALIGN ||
