@@ -4,6 +4,7 @@
 * make some modifications to the readme:
   * explain what I changed and why
 * add targets for the different screens instead of toggling them in cmakefiles
+fix saving :(
 
 # Maybe not todo...
 

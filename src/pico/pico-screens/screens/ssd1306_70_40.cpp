@@ -55,17 +55,6 @@ extern "C" {
         nearestNeighborHandleFrameStart();
     }
 
-    uint16_t colorToGreyscale(uint16_t pixel) {
-        uint8_t r = pixel & 0b1111100000000000 >> 11;
-        uint8_t g = pixel & 0b0000011111100000 >> 5;
-        uint8_t b = pixel & 0b0000000000011111;
-
-        // I reached these numbers by complete brute force. every formula I tried was way too dark... not sure why
-        uint16_t greyscale = (32 * r + 34 * g + 12 * b) >> 1;
-        if (greyscale < 255) return greyscale;
-        return 255;
-    }
-
     SSD1306PixelColor greyscaleToColorCodes(uint16_t greyscale) {
         if (greyscale > 127) {
             return SSD1306_COLOR_ON;

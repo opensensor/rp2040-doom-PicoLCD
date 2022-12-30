@@ -3,6 +3,7 @@
 #include "screens/lilygo_ttgo.h"
 #include "screens/st7789_240_135.h"
 #include "screens/ssd1306_70_40.hpp"
+#include "screens/ssd1306_70_40_i2c.h"
 
 #if SSD1306_70_40
 static void* ssd1306_70_40;
@@ -20,6 +21,8 @@ void I_initScreen(void) {
     lilygo_ttgo_initScreen();
 #elif SSD1306_70_40
     ssd1306_70_40_initScreen();
+#elif SSD1306_70_40_i2c
+    ssd1306_70_40_i2c_initScreen();
 #endif
 }
 
@@ -31,6 +34,8 @@ void I_handleFrameStart(uint8_t frame) {
     lilygo_ttgo_handleFrameStart(frame);
 #elif SSD1306_70_40
     ssd1306_70_40_handleFrameStart(frame);
+#elif SSD1306_70_40_i2c
+    ssd1306_70_40_i2c_handleFrameStart(frame);
 #endif
 
 }
@@ -42,12 +47,16 @@ void I_handleScanline(uint16_t *line, int scanline) {
     lilygo_ttgo_handleScanline(line, scanline);
 #elif SSD1306_70_40
     ssd1306_70_40_handleScanline(line, scanline);
+#elif SSD1306_70_40_i2c
+    ssd1306_70_40_i2c_handleScanline(line, scanline);
 #endif
 }
 
 void I_handleFrameEnd(uint8_t frame) {
 #if SSD1306_70_40
     ssd1306_70_40_handleFrameEnd(frame);
+#elif SSD1306_70_40_i2c
+    ssd1306_70_40_i2c_handleFrameEnd(frame);
 #endif
     gpio_put(PICO_DEFAULT_LED_PIN, 1);
 }

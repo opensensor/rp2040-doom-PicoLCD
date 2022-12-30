@@ -11,6 +11,7 @@ add_subdirectory(adpcm-xq)
 # screens
 add_subdirectory(pico_st7789)
 add_subdirectory(pico_ssd1306)
+add_subdirectory(pico_ssd1306_i2c)
 
 foreach(SUBDIR ${BINARIES})
     add_subdirectory("${SUBDIR}")
@@ -501,8 +502,9 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
         DOOM_TINY=1
         
         # LILYGO_TTGO=1
-        ST7789_240_135=1
+        # ST7789_240_135=1
         # SSD1306_70_40=1
+        SSD1306_70_40_i2c=1
         
         SUPPORT_OVERLAYS=1
         EMU8950_SLOT_RENDER=1
@@ -584,8 +586,10 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
     )
     if (PICO_ON_DEVICE)
         # target_link_libraries(doom_tiny${SUFFIX} PRIVATE hardware_spi)
+        # TODO use defs or targets for these?
         target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_st7789 hardware_spi)
         target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_ssd1306)
+        target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_ssd1306_i2c hardware_i2c)
         target_compile_options(doom_tiny${SUFFIX} PRIVATE -fno-common -fdata-sections -Wl,--sort-section=alignment)
         target_compile_definitions(doom_tiny${SUFFIX} PRIVATE
                 NO_ZONE_DEBUG=1

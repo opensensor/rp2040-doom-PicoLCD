@@ -15,6 +15,7 @@ target_sources(common_pico INTERFACE
         ${CMAKE_CURRENT_LIST_DIR}/pico-screens/screens/lilygo_ttgo.c
         ${CMAKE_CURRENT_LIST_DIR}/pico-screens/screens/st7789_240_135.c
         ${CMAKE_CURRENT_LIST_DIR}/pico-screens/screens/ssd1306_70_40.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/pico-screens/screens/ssd1306_70_40_i2c.c
 )
 if (PICO_ON_DEVICE)
     target_sources(common_pico INTERFACE
