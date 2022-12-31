@@ -14,6 +14,9 @@
 #include <stdlib.h>
 #include "pico/st7789.h"
 
+#undef DOWNSAMPLING_FACTOR_OUT_OF_100
+#define DOWNSAMPLING_FACTOR_OUT_OF_100 148
+
 #define MEMORY_WIDTH 320
 #define MEMORY_HEIGHT 240
 

@@ -24,10 +24,12 @@ void ssd1306_70_40_i2c_initScreen(void) {
     i2c_init(i2c1, 400 * 1000);
     gpio_set_function(22, GPIO_FUNC_I2C);
     gpio_set_function(23, GPIO_FUNC_I2C);
+    bi_decl(bi_2pins_with_func(22, 23, GPIO_FUNC_I2C));
     gpio_pull_up(22);
     gpio_pull_up(23);
     
     ssd1306_init(&disp, 128, 64, 0x3C, i2c1);
+    ssd1306_clear(&disp);
 
     ssd1306_draw_line(&disp, 28, 20, 98, 20);
     ssd1306_show(&disp);
