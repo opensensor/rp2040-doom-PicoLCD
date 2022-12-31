@@ -8,6 +8,8 @@
 #include "pico.h"
 #include "hardware/i2c.h"
 #include "pico/binary_info.h"
+#include "pico/stdlib.h"
+
 
 #include <stdlib.h>
 

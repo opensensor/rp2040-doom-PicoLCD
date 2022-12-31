@@ -1,254 +1,90 @@
-/*
-MIT License
+/* Example code to talk to an SSD1306-based OLED display
 
-Copyright (c) 2021 David Schramm
+   The SSD1306 is an OLED/PLED driver chip, capable of driving displays up to
+   128x64 pixels.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+   NOTE: Ensure the device is capable of being driven at 3.3v NOT 5v. The Pico
+   GPIO (and therefore I2C) cannot be used at 5v.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+   You will need to use a level shifter on the I2C lines if you want to run the
+   board at 5v.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+   Connections on Raspberry Pi Pico board, other boards may vary.
+
+   GPIO PICO_DEFAULT_I2C_SDA_PIN (on Pico this is GP4 (pin 6)) -> SDA on display
+   board
+   GPIO PICO_DEFAULT_I2C_SCL_PIN (on Pico this is GP5 (pin 7)) -> SCL on
+   display board
+   3.3v (pin 36) -> VCC on display board
+   GND (pin 38)  -> GND on display board
 */
 
-/** 
-* @file ssd1306.h
-* 
-* simple driver for ssd1306 displays
-*/
+#ifndef SSD1306_H
+#define SSD1306_H
 
-#ifndef _inc_ssd1306
-#define _inc_ssd1306
-#include <pico/stdlib.h>
-#include <hardware/i2c.h>
+// Define the size of the display we have attached. This can vary, make sure you
+// have the right size defined or the output will look rather odd!
+// Code has been tested on 128x32 and 128x64 OLED displays
+#define SSD1306_HEIGHT              64
+#define SSD1306_WIDTH               128
 
-/**
-*	@brief defines commands used in ssd1306
-*/
-typedef enum {
-    SET_CONTRAST = 0x81,
-    SET_ENTIRE_ON = 0xA4,
-    SET_NORM_INV = 0xA6,
-    SET_DISP = 0xAE,
-    SET_MEM_ADDR = 0x20,
-    SET_COL_ADDR = 0x21,
-    SET_PAGE_ADDR = 0x22,
-    SET_DISP_START_LINE = 0x40,
-    SET_SEG_REMAP = 0xA0,
-    SET_MUX_RATIO = 0xA8,
-    SET_COM_OUT_DIR = 0xC0,
-    SET_DISP_OFFSET = 0xD3,
-    SET_COM_PIN_CFG = 0xDA,
-    SET_DISP_CLK_DIV = 0xD5,
-    SET_PRECHARGE = 0xD9,
-    SET_VCOM_DESEL = 0xDB,
-    SET_CHARGE_PUMP = 0x8D
-} ssd1306_command_t;
+#define SSD1306_I2C_ADDR            _u(0x3C)
 
-/**
-*	@brief holds the configuration
-*/
-typedef struct {
-    uint8_t width; 		/**< width of display */
-    uint8_t height; 	/**< height of display */
-    uint8_t pages;		/**< stores pages of display (calculated on initialization*/
-    uint8_t address; 	/**< i2c address of display*/
-    i2c_inst_t *i2c_i; 	/**< i2c connection instance */
-    bool external_vcc; 	/**< whether display uses external vcc */ 
-    uint8_t *buffer;	/**< display buffer */
-    size_t bufsize;		/**< buffer size */
-} ssd1306_t;
+// 400 is usual, but often these can be overclocked to improve display response.
+// Tested at 1000 on both 32 and 84 pixel height devices and it worked.
+#define SSD1306_I2C_CLK             400
+//#define SSD1306_I2C_CLK             1000
 
-/**
-*	@brief initialize display
-*
-*	@param[in] p : pointer to instance of ssd1306_t
-*	@param[in] width : width of display
-*	@param[in] height : heigth of display
-*	@param[in] address : i2c address of display
-*	@param[in] i2c_instance : instance of i2c connection
-*	
-* 	@return bool.
-*	@retval true for Success
-*	@retval false if initialization failed
-*/
-bool ssd1306_init(ssd1306_t *p, uint16_t width, uint16_t height, uint8_t address, i2c_inst_t *i2c_instance);
 
-/**
-*	@brief deinitialize display
-*
-*	@param[in] p : instance of display
-*
-*/
-void ssd1306_deinit(ssd1306_t *p);
+// commands (see datasheet)
+#define SSD1306_SET_MEM_MODE        _u(0x20)
+#define SSD1306_SET_COL_ADDR        _u(0x21)
+#define SSD1306_SET_PAGE_ADDR       _u(0x22)
+#define SSD1306_SET_HORIZ_SCROLL    _u(0x26)
+#define SSD1306_SET_SCROLL          _u(0x2E)
 
-/**
-*	@brief turn off display
-*
-*	@param[in] p : instance of display
-*
-*/
-void ssd1306_poweroff(ssd1306_t *p);
+#define SSD1306_SET_DISP_START_LINE _u(0x40)
 
-/**
-	@brief turn on display
+#define SSD1306_SET_CONTRAST        _u(0x81)
+#define SSD1306_SET_CHARGE_PUMP     _u(0x8D)
 
-	@param[in] p : instance of display
+#define SSD1306_SET_SEG_REMAP       _u(0xA0)
+#define SSD1306_SET_ENTIRE_ON       _u(0xA4)
+#define SSD1306_SET_ALL_ON          _u(0xA5)
+#define SSD1306_SET_NORM_DISP       _u(0xA6)
+#define SSD1306_SET_INV_DISP        _u(0xA7)
+#define SSD1306_SET_MUX_RATIO       _u(0xA8)
+#define SSD1306_SET_DISP            _u(0xAE)
+#define SSD1306_SET_COM_OUT_DIR     _u(0xC0)
+#define SSD1306_SET_COM_OUT_DIR_FLIP _u(0xC0)
 
-*/
-void ssd1306_poweron(ssd1306_t *p);
+#define SSD1306_SET_DISP_OFFSET     _u(0xD3)
+#define SSD1306_SET_DISP_CLK_DIV    _u(0xD5)
+#define SSD1306_SET_PRECHARGE       _u(0xD9)
+#define SSD1306_SET_COM_PIN_CFG     _u(0xDA)
+#define SSD1306_SET_VCOM_DESEL      _u(0xDB)
 
-/**
-	@brief set contrast of display
+#define SSD1306_PAGE_HEIGHT         _u(8)
+#define SSD1306_NUM_PAGES           (SSD1306_HEIGHT / SSD1306_PAGE_HEIGHT)
+#define SSD1306_BUF_LEN             (SSD1306_NUM_PAGES * SSD1306_WIDTH)
 
-	@param[in] p : instance of display
-	@param[in] val : contrast
+#define SSD1306_WRITE_MODE         _u(0xFE)
+#define SSD1306_READ_MODE          _u(0xFF)
 
-*/
-void ssd1306_contrast(ssd1306_t *p, uint8_t val);
 
-/**
-	@brief set invert display
+struct render_area {
+    uint8_t start_col;
+    uint8_t end_col;
+    uint8_t start_page;
+    uint8_t end_page;
 
-	@param[in] p : instance of display
-	@param[in] inv : inv==0: disable inverting, inv!=0: invert
+    int buflen;
+};
 
-*/
-void ssd1306_invert(ssd1306_t *p, uint8_t inv);
+void SSD1306_init(void);
+void SSD1306_i2c_render(uint8_t *buf, struct render_area *area);
+void SSD1306_send_cmd(uint8_t cmd);
+void SSD1306_setPixel(uint8_t *buf, int x,int y, bool on);
 
-/**
-	@brief display buffer, should be called on change
 
-	@param[in] p : instance of display
-
-*/
-void ssd1306_show(ssd1306_t *p);
-
-/**
-	@brief clear display buffer
-
-	@param[in] p : instance of display
-
-*/
-void ssd1306_clear(ssd1306_t *p);
-
-/**
-	@brief draw pixel on buffer
-
-	@param[in] p : instance of display
-	@param[in] x : x position
-	@param[in] y : y position
-*/
-void ssd1306_draw_pixel(ssd1306_t *p, uint32_t x, uint32_t y);
-
-/**
-	@brief draw pixel on buffer
-
-	@param[in] p : instance of display
-	@param[in] x1 : x position of starting point
-	@param[in] y1 : y position of starting point
-	@param[in] x2 : x position of end point
-	@param[in] y2 : y position of end point
-*/
-void ssd1306_draw_line(ssd1306_t *p, int32_t x1, int32_t y1, int32_t x2, int32_t y2);
-
-/**
-	@brief draw filled square at given position with given size
-
-	@param[in] p : instance of display
-	@param[in] x : x position of starting point
-	@param[in] y : y position of starting point
-	@param[in] width : width of square
-	@param[in] height : height of square
-*/
-void ssd1306_draw_square(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-
-/**
-	@brief draw empty square at given position with given size
-
-	@param[in] p : instance of display
-	@param[in] x : x position of starting point
-	@param[in] y : y position of starting point
-	@param[in] width : width of square
-	@param[in] height : height of square
-*/
-void ssd13606_draw_empty_square(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-
-/**
-	@brief draw monochrome bitmap with offset
-
-	@param[in] p : instance of display
-	@param[in] data : image data (whole file)
-	@param[in] size : size of image data in bytes
-	@param[in] x_offset : offset of horizontal coordinate
-	@param[in] y_offset : offset of vertical coordinate
-*/
-void ssd1306_bmp_show_image_with_offset(ssd1306_t *p, const uint8_t *data, const long size, uint32_t x_offset, uint32_t y_offset);
-
-/**
-	@brief draw monochrome bitmap
-
-	@param[in] p : instance of display
-	@param[in] data : image data (whole file)
-	@param[in] size : size of image data in bytes
-*/
-void ssd1306_bmp_show_image(ssd1306_t *p, const uint8_t *data, const long size);
-
-/**
-	@brief draw char with given font
-
-	@param[in] p : instance of display
-	@param[in] x : x starting position of char
-	@param[in] y : y starting position of char
-	@param[in] scale : scale font to n times of original size (default should be 1)
-	@param[in] font : pointer to font
-	@param[in] c : character to draw
-*/
-void ssd1306_draw_char_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const uint8_t *font, char c);
-
-/**
-	@brief draw char with builtin font
-
-	@param[in] p : instance of display
-	@param[in] x : x starting position of char
-	@param[in] y : y starting position of char
-	@param[in] scale : scale font to n times of original size (default should be 1)
-	@param[in] c : character to draw
-*/
-void ssd1306_draw_char(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, char c);
-
-/**
-	@brief draw string with given font
-
-	@param[in] p : instance of display
-	@param[in] x : x starting position of text
-	@param[in] y : y starting position of text
-	@param[in] scale : scale font to n times of original size (default should be 1)
-	@param[in] font : pointer to font
-	@param[in] s : text to draw
-*/
-void ssd1306_draw_string_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const uint8_t *font, const char *s );
-
-/**
-	@brief draw string with builtin font
-
-	@param[in] p : instance of display
-	@param[in] x : x starting position of text
-	@param[in] y : y starting position of text
-	@param[in] scale : scale font to n times of original size (default should be 1)
-	@param[in] s : text to draw
-*/
-void ssd1306_draw_string(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const char *s);
-
-#endif
+#endif  // SSD1306_H
