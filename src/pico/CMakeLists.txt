@@ -3,7 +3,8 @@ target_sources(common_pico INTERFACE
         ${CMAKE_CURRENT_LIST_DIR}/i_glob.c
         ${CMAKE_CURRENT_LIST_DIR}/i_input.c
         ${CMAKE_CURRENT_LIST_DIR}/i_system.c
-        ${CMAKE_CURRENT_LIST_DIR}/piconet.c
+        $<$<BOOL:${USE_PICO_NET}>:${CMAKE_CURRENT_LIST_DIR}/piconet.c>
+        
         ${CMAKE_CURRENT_LIST_DIR}/i_timer.c
         ${CMAKE_CURRENT_LIST_DIR}/i_video.c
         ${CMAKE_CURRENT_LIST_DIR}/stubs.c

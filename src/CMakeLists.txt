@@ -474,7 +474,7 @@ if (TARGET chocolate-doom)
     )
 endif()
 
-function(add_doom_tiny SUFFIX RENDER_LIB)
+function(add_doom_tiny SUFFIX SCREEN)
     add_executable(doom_tiny${SUFFIX})
     target_link_libraries(doom_tiny${SUFFIX} PRIVATE game)
 
@@ -487,8 +487,8 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
     target_link_libraries(doom_tiny${SUFFIX} PRIVATE doom ${EXTRA_LIBS})
     target_link_libraries(doom_tiny${SUFFIX} PRIVATE small_doom_common)
 
-    pico_enable_stdio_usb(doom_tiny${SUFFIX} 0)
-    pico_enable_stdio_uart(doom_tiny${SUFFIX} 1)
+    # pico_enable_stdio_usb(doom_tiny${SUFFIX} 0)
+    # pico_enable_stdio_uart(doom_tiny${SUFFIX} 1)
 
     if (PICO_SDK)
         pico_set_float_implementation(doom_tiny${SUFFIX} none)
@@ -500,11 +500,12 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
             -Wno-format-truncation)
     target_compile_definitions(doom_tiny${SUFFIX} PRIVATE
         DOOM_TINY=1
-        
+
         # LILYGO_TTGO=1
         # ST7789_240_135=1
         # SSD1306_70_40=1
-        SSD1306_70_40_i2c=1
+        # SSD1306_70_40_i2c=1
+        ${SCREEN}=1
         
         SUPPORT_OVERLAYS=1
         EMU8950_SLOT_RENDER=1
@@ -524,11 +525,11 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
         USE_DIRECT_MIDI_LUMP=1
 
         NO_USE_NET=1 # standard networking
-        USE_PICO_NET=1
+        USE_PICO_NET=0
         # for vgaboard
-        PICO_DEFAULT_I2C=1
-        PICO_DEFAULT_I2C_SDA_PIN=18
-        PICO_DEFAULT_I2C_SCL_PIN=19
+        # PICO_DEFAULT_I2C=1
+        # PICO_DEFAULT_I2C_SDA_PIN=18
+        # PICO_DEFAULT_I2C_SCL_PIN=19
 
         #NO_USE_LOAD=1
         #NO_USE_SAVE=1
@@ -598,7 +599,7 @@ function(add_doom_tiny SUFFIX RENDER_LIB)
     if (FORCE_DEBUG)
         target_compile_options(doom_tiny${SUFFIX} PRIVATE -g)
     endif()
-    target_link_libraries(doom_tiny${SUFFIX} PRIVATE ${RENDER_LIB})
+    target_link_libraries(doom_tiny${SUFFIX} PRIVATE render_newhope)
     set(PICO_HACK 0)
     set(STAMP_HACK 0)
     if (PICO_HACK)
@@ -645,40 +646,50 @@ else()
 endif()
 
 if (PICO_SDK)
-    add_doom_tiny("" render_newhope)
     add_library(tiny_settings INTERFACE)
-    target_compile_definitions(tiny_settings INTERFACE
-            WHD_SUPER_TINY=1
-            DEMO1_ONLY=1
-            NO_USE_FINALE_CAST=1
-            NO_USE_FINALE_BUNNY=1
-    )
-    target_compile_definitions(doom_tiny PRIVATE
-            TINY_WAD_ADDR=0x10040000
-    )
-    target_link_libraries(doom_tiny PRIVATE tiny_settings)
-    add_doom_tiny(_nost render_newhope)
-
-    target_compile_definitions(doom_tiny_nost PRIVATE
-            # NO_USE_FINALE_CAST=1 # note this is only used by doom II but doesnt take that much more space
-            TINY_WAD_ADDR=0x10048000
-            )
-    if (PICO_ON_DEVICE)
-        suppress_tinyusb_warnings()
-        add_doom_tiny(_usb render_newhope)
-        target_link_libraries(doom_tiny_usb PRIVATE tiny_settings pico_cd)
-        target_compile_definitions(doom_tiny_usb PRIVATE
-                USB_SUPPORT=1
-                TINY_WAD_ADDR=0x10042000 # ugh tinyusb is >8K currently!!
-        )
-        add_doom_tiny(_nost_usb render_newhope)
-        target_link_libraries(doom_tiny_nost_usb PRIVATE pico_cd)
-        target_compile_definitions(doom_tiny_nost_usb PRIVATE
-                USB_SUPPORT=1
-                TINY_WAD_ADDR=0x10048000
-                )
-    endif()
 endif()
 
+function(add_doom_tiny_screen SCREEN)
+    if (PICO_SDK)
+        add_doom_tiny(_${SCREEN} ${SCREEN})
+        target_compile_definitions(tiny_settings INTERFACE
+                WHD_SUPER_TINY=1
+                DEMO1_ONLY=1
+                NO_USE_FINALE_CAST=1
+                NO_USE_FINALE_BUNNY=1
+        )
+        target_compile_definitions(doom_tiny_${SCREEN} PRIVATE
+                TINY_WAD_ADDR=0x10040000
+        )
+        target_link_libraries(doom_tiny_${SCREEN} PRIVATE tiny_settings)
 
+        # disabled because I don't need it, probably still works...
+        # add_doom_tiny(_nost_${SCREEN} ${SCREEN})
 
+        # target_compile_definitions(doom_tiny_nost_${SCREEN} PRIVATE
+        #         # NO_USE_FINALE_CAST=1 # note this is only used by doom II but doesnt take that much more space
+        #         TINY_WAD_ADDR=0x10048000
+        #         )
+        if (PICO_ON_DEVICE)
+            suppress_tinyusb_warnings()
+            add_doom_tiny(_usb_${SCREEN} ${SCREEN})
+            target_link_libraries(doom_tiny_usb_${SCREEN} PRIVATE tiny_settings pico_cd)
+            target_compile_definitions(doom_tiny_usb_${SCREEN} PRIVATE
+                    USB_SUPPORT=1
+                    TINY_WAD_ADDR=0x10042000 # ugh tinyusb is >8K currently!!
+            )
+            # disabled for same reason as above
+            # add_doom_tiny(_nost_usb_${SCREEN} ${SCREEN})
+            # target_link_libraries(doom_tiny_nost_usb_${SCREEN} PRIVATE pico_cd)
+            # target_compile_definitions(doom_tiny_nost_usb_${SCREEN} PRIVATE
+            #         USB_SUPPORT=1
+            #         TINY_WAD_ADDR=0x10048000
+            #         )
+        endif()
+    endif()
+endfunction()
+
+add_doom_tiny_screen("SSD1306_70_40")
+add_doom_tiny_screen("SSD1306_70_40_i2c")
+add_doom_tiny_screen("LILYGO_TTGO")
+add_doom_tiny_screen("ST7789_240_135")
