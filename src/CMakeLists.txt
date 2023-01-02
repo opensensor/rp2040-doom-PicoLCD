@@ -647,21 +647,22 @@ endif()
 
 if (PICO_SDK)
     add_library(tiny_settings INTERFACE)
+    target_compile_definitions(tiny_settings INTERFACE
+        WHD_SUPER_TINY=1
+        DEMO1_ONLY=1
+        NO_USE_FINALE_CAST=1
+        NO_USE_FINALE_BUNNY=1
+    )
 endif()
 
 function(add_doom_tiny_screen SCREEN)
     if (PICO_SDK)
-        add_doom_tiny(_${SCREEN} ${SCREEN})
-        target_compile_definitions(tiny_settings INTERFACE
-                WHD_SUPER_TINY=1
-                DEMO1_ONLY=1
-                NO_USE_FINALE_CAST=1
-                NO_USE_FINALE_BUNNY=1
-        )
-        target_compile_definitions(doom_tiny_${SCREEN} PRIVATE
-                TINY_WAD_ADDR=0x10040000
-        )
-        target_link_libraries(doom_tiny_${SCREEN} PRIVATE tiny_settings)
+        # add_doom_tiny(_${SCREEN} ${SCREEN})
+
+        # target_compile_definitions(doom_tiny_${SCREEN} PRIVATE
+        #         TINY_WAD_ADDR=0x10040000
+        # )
+        # target_link_libraries(doom_tiny_${SCREEN} PRIVATE tiny_settings)
 
         # disabled because I don't need it, probably still works...
         # add_doom_tiny(_nost_${SCREEN} ${SCREEN})
@@ -674,7 +675,7 @@ function(add_doom_tiny_screen SCREEN)
             suppress_tinyusb_warnings()
             add_doom_tiny(_usb_${SCREEN} ${SCREEN})
             target_link_libraries(doom_tiny_usb_${SCREEN} PRIVATE tiny_settings pico_cd)
-            target_compile_definitions(doom_tiny_usb_${SCREEN} PRIVATE
+            target_compile_definitions(doom_tiny_usb_${SCREEN} PRIVATE 
                     USB_SUPPORT=1
                     TINY_WAD_ADDR=0x10042000 # ugh tinyusb is >8K currently!!
             )
