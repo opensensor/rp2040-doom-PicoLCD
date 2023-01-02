@@ -25,14 +25,18 @@
 // Define the size of the display we have attached. This can vary, make sure you
 // have the right size defined or the output will look rather odd!
 // Code has been tested on 128x32 and 128x64 OLED displays
-#define SSD1306_HEIGHT              64
-#define SSD1306_WIDTH               128
+#define SSD1306_HEIGHT              48
+#define SSD1306_WIDTH               72
+
+#define SSD1306_MEMORY_HEIGHT       64
+#define SSD1306_MEMORY_WIDTH       128
+
 
 #define SSD1306_I2C_ADDR            _u(0x3C)
 
 // 400 is usual, but often these can be overclocked to improve display response.
 // Tested at 1000 on both 32 and 84 pixel height devices and it worked.
-#define SSD1306_I2C_CLK             400
+#define SSD1306_I2C_CLK             2000
 //#define SSD1306_I2C_CLK             1000
 
 
@@ -65,11 +69,19 @@
 #define SSD1306_SET_VCOM_DESEL      _u(0xDB)
 
 #define SSD1306_PAGE_HEIGHT         _u(8)
-#define SSD1306_NUM_PAGES           (SSD1306_HEIGHT / SSD1306_PAGE_HEIGHT)
-#define SSD1306_BUF_LEN             (SSD1306_NUM_PAGES * SSD1306_WIDTH)
+#define SSD1306_NUM_PAGE_ROWS           (SSD1306_HEIGHT / SSD1306_PAGE_HEIGHT)
+#define SSD1306_NUM_MEMORY_PAGE_ROWS    (SSD1306_MEMORY_HEIGHT / SSD1306_PAGE_HEIGHT)
+
+#define SSD1306_BUF_LEN             (SSD1306_NUM_PAGE_ROWS * SSD1306_WIDTH)
 
 #define SSD1306_WRITE_MODE         _u(0xFE)
 #define SSD1306_READ_MODE          _u(0xFF)
+
+#define SSD1306_70_40_START_COLUMN 28
+#define SSD1306_70_40_END_COLUMN 99
+
+#define SSD1306_70_40_START_PAGE 0
+#define SSD1306_70_40_END_PAGE 4
 
 
 struct render_area {
@@ -82,9 +94,11 @@ struct render_area {
 };
 
 void SSD1306_init(void);
-void SSD1306_i2c_render(uint8_t *buf, struct render_area *area);
+void SSD1306_render(uint8_t *buf, struct render_area *area);
 void SSD1306_send_cmd(uint8_t cmd);
+void SSD1306_send_cmd_list(uint8_t *buf, int num);
 void SSD1306_setPixel(uint8_t *buf, int x,int y, bool on);
+void calc_render_area_buflen(struct render_area *area);
 
 
 #endif  // SSD1306_H
