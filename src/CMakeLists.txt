@@ -12,6 +12,7 @@ add_subdirectory(adpcm-xq)
 add_subdirectory(pico_st7789)
 add_subdirectory(pico_ssd1306)
 add_subdirectory(pico_ssd1306_i2c)
+add_subdirectory(hagl_hal)
 
 foreach(SUBDIR ${BINARIES})
     add_subdirectory("${SUBDIR}")
@@ -591,6 +592,7 @@ function(add_doom_tiny SUFFIX SCREEN)
         target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_st7789 hardware_spi)
         target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_ssd1306)
         target_link_libraries(doom_tiny${SUFFIX} PRIVATE pico_ssd1306_i2c hardware_i2c)
+        target_link_libraries(doom_tiny${SUFFIX} PRIVATE hagl_hal hardware_spi)
         target_compile_options(doom_tiny${SUFFIX} PRIVATE -fno-common -fdata-sections -Wl,--sort-section=alignment)
         target_compile_definitions(doom_tiny${SUFFIX} PRIVATE
                 NO_ZONE_DEBUG=1
@@ -694,3 +696,39 @@ add_doom_tiny_screen("SSD1306_70_40")
 add_doom_tiny_screen("SSD1306_70_40_i2c")
 add_doom_tiny_screen("LILYGO_TTGO")
 add_doom_tiny_screen("ST7789_240_135")
+
+add_doom_tiny_screen("ST7735_128_128")
+target_compile_definitions(doom_tiny_usb_ST7735_128_128 PRIVATE
+    HAGL_HAL_USE_SINGLE_BUFFER
+    # MIPI_DISPLAY_INVERT=1
+
+
+    # screen-specific
+
+    MIPI_DISPLAY_PIN_DC=20
+    MIPI_DISPLAY_PIN_CS=17
+    MIPI_DISPLAY_PIN_CLK=18
+    MIPI_DISPLAY_PIN_MOSI=19
+    MIPI_DISPLAY_PIN_RST=21
+    MIPI_DISPLAY_PIN_BL=-1
+    MIPI_DISPLAY_PIN_MISO=-1
+
+    MIPI_DISPLAY_SPI_PORT=spi0
+    MIPI_DISPLAY_SPI_CLOCK_SPEED_HZ=62500000
+    MIPI_DISPLAY_PIXEL_FORMAT=MIPI_DCS_PIXEL_FORMAT_16BIT
+
+    MIPI_DISPLAY_ADDRESS_MODE=MIPI_DCS_ADDRESS_MODE_BGR|MIPI_DCS_ADDRESS_MODE_MIRROR_Y|MIPI_DCS_ADDRESS_MODE_MIRROR_X
+    MIPI_DISPLAY_WIDTH=128
+    MIPI_DISPLAY_HEIGHT=128
+    MIPI_DISPLAY_OFFSET_X=2
+    MIPI_DISPLAY_OFFSET_Y=1
+
+    # MIPI_DISPLAY_ADDRESS_MODE=MIPI_DCS_ADDRESS_MODE_BGR|MIPI_DCS_ADDRESS_MODE_SWAP_XY|MIPI_DCS_ADDRESS_MODE_MIRROR_Y
+    # MIPI_DISPLAY_WIDTH=128
+    # MIPI_DISPLAY_HEIGHT=128
+    # MIPI_DISPLAY_OFFSET_X=2
+    # MIPI_DISPLAY_OFFSET_Y=2
+
+    MIPI_DISPLAY_INVERT=1
+)
+

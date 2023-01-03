@@ -4,6 +4,7 @@
 #include "screens/st7789_240_135.h"
 #include "screens/ssd1306_70_40.hpp"
 #include "screens/ssd1306_70_40_i2c.h"
+#include "screens/st7735_128_128.h"
 
 #if SSD1306_70_40
 static void* ssd1306_70_40;
@@ -23,6 +24,9 @@ void I_initScreen(void) {
     ssd1306_70_40_initScreen();
 #elif SSD1306_70_40_i2c
     ssd1306_70_40_i2c_initScreen();
+// TODO get better aspect ratio screen
+#elif ST7735_128_128
+    st7735_128_128_initScreen();
 #endif
 }
 
@@ -36,6 +40,8 @@ void I_handleFrameStart(uint8_t frame) {
     ssd1306_70_40_handleFrameStart(frame);
 #elif SSD1306_70_40_i2c
     ssd1306_70_40_i2c_handleFrameStart(frame);
+#elif ST7735_128_128
+    st7735_128_128_handleFrameStart(frame);
 #endif
 
 }
@@ -49,6 +55,8 @@ void I_handleScanline(uint16_t *line, int scanline) {
     ssd1306_70_40_handleScanline(line, scanline);
 #elif SSD1306_70_40_i2c
     ssd1306_70_40_i2c_handleScanline(line, scanline);
+#elif ST7735_128_128
+    st7735_128_128_handleScanline(line, scanline);
 #endif
 }
 
