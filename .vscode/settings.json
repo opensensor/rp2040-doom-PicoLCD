@@ -7,6 +7,7 @@
         "lilygo_ttgo.h": "c",
         "shared.h": "c",
         "ssd1306_i2c.h": "c",
-        "st7735_128_128.h": "c"
+        "st7735_128_128.h": "c",
+        "video_doom.pio.h": "c"
     }
 }

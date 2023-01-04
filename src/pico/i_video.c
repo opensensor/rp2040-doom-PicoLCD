@@ -50,7 +50,6 @@
 #include "pico/time.h"
 #include "hardware/gpio.h"
 #include "picodoom.h"
-#include "video_doom.pio.h"
 #include "image_decoder.h"
 #include "pico-screens/screen.h"
 #if PICO_ON_DEVICE
@@ -109,7 +108,7 @@ volatile uint8_t interp_in_use;
 
 static boolean initialized = false;
 
-static uint8_t frame = 0;
+static uint32_t frame = 0;
 
 boolean screenvisible = true;
 
@@ -798,20 +797,14 @@ void __noinline new_frame_init_overlays_palette_and_wipe() {
 // this method moved out of scratchx because we didn't have quite enough space for core1 stack
 void __no_inline_not_in_flash_func(new_frame_stuff)() {
     // this part of the per frame code is in RAM as it is needed during save
-    if (sem_available(&render_frame_ready)) {
-        sem_acquire_blocking(&render_frame_ready);
-        display_video_type = next_video_type;
-        display_frame_index = next_frame_index;
-        display_overlay_index = next_overlay_index;
+    sem_acquire_blocking(&render_frame_ready);
+    display_video_type = next_video_type;
+    display_frame_index = next_frame_index;
+    display_overlay_index = next_overlay_index;
 #if !DEMO1_ONLY
-        video_scroll = next_video_scroll; // todo does this waste too much space
+    video_scroll = next_video_scroll; // todo does this waste too much space
 #endif
-        sem_release(&display_frame_freed);
-    } else {
-#if !DEMO1_ONLY
-        video_scroll = NULL;
-#endif
-    }
+    sem_release(&display_frame_freed);
     if (display_video_type != VIDEO_TYPE_SAVING) {
         // this stuff is large (so in flash) and not needed in save move
         new_frame_init_overlays_palette_and_wipe();
@@ -851,6 +844,7 @@ void __scratch_x("scanlines") handle_overlays(uint16_t *buffer, int scanline) {
 
 void __scratch_x("scanlines") fill_scanlines() {
     frame++;
+    // this shouldn't be here, but it's required for some reason
     if (display_video_type != VIDEO_TYPE_SAVING && frame > 1) {
         // this stuff is large (so in flash) and not needed in save move
         new_frame_init_overlays_palette_and_wipe();

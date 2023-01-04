@@ -45,7 +45,6 @@ target_compile_definitions(common_pico INTERFACE
         PICO_AUDIO_I2S_DMA_IRQ=1
         )
 
-pico_generate_pio_header(common_pico ${CMAKE_CURRENT_LIST_DIR}/video_doom.pio)
 target_link_libraries(common_pico INTERFACE pico_stdlib pico_multicore pico_scanvideo_dpi)
 
 add_library(pico_cd INTERFACE)

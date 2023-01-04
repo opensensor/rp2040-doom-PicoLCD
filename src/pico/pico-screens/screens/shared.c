@@ -1,4 +1,5 @@
 #include "shared.h"
+#include "stdlib.h"
 
 // what (downsampled) scanline we are processing right now
 static uint8_t current_downsampled_scanline = 0;
@@ -42,23 +43,33 @@ uint16_t separateSumAndAveragePixels(uint16_t *pixels, uint8_t length, uint8_t w
 
 // TODO this picks up trash on the very last run - on a [100] array at 98 we'll check 98 99 100 101
 uint16_t areaAverageDownsamplePixelGroup(uint16_t *src, uint16_t end) {
+    uint16_t total_weight = 0;
     uint16_t r_sum = 0, g_sum = 0, b_sum = 0;
 
     for(uint8_t pixel = 0; pixel < end; pixel++) {
-        r_sum += ((src[pixel] & 0b1111100000000000) >> 11);
-        g_sum += ((src[pixel] & 0b0000011111100000) >> 5);
-        b_sum += (src[pixel] & 0b0000000000011111);
+        uint16_t position = pixel * 100;
+        uint16_t middle_position = end * 100 >> 1; // / 2
+
+        uint16_t weight = end * 100 - abs(middle_position - position);
+
+        total_weight += weight;
+
+        r_sum += ((src[pixel] & 0b1111100000000000) >> 11) * weight;
+        g_sum += ((src[pixel] & 0b0000011111100000) >> 5) * weight;
+        b_sum += (src[pixel] & 0b0000000000011111) * weight;
     }
 
     uint16_t downsampled_pixel;
-    downsampled_pixel  =   (b_sum / end)        & 0b0000000000011111;
-    downsampled_pixel |= (((g_sum / end) << 5)  & 0b0000011111100000);
-    downsampled_pixel |= (((r_sum / end) << 11) & 0b1111100000000000);
+    downsampled_pixel  =   (b_sum / total_weight)        & 0b0000000000011111;
+    downsampled_pixel |= (((g_sum / total_weight) << 5)  & 0b0000011111100000);
+    downsampled_pixel |= (((r_sum / total_weight) << 11) & 0b1111100000000000);
 
     return downsampled_pixel;
 }
 
-void areaAverageDownsampleLine(uint16_t *src, uint16_t *dest) {
+// static uint16_t scanline_total_weight = 0;
+
+void areaAverageDownsampleLine(uint16_t *src, uint16_t *dest, uint8_t weight) {
     for (uint16_t x = 0; x < DOWNSAMPLED_WIDTH; x++) {
         uint16_t start = (x * DOWNSAMPLING_FACTOR_OUT_OF_100 / 100);
         // effectively last_downsample_line but for columns
@@ -72,11 +83,11 @@ void areaAverageDownsampleLine(uint16_t *src, uint16_t *dest) {
         uint8_t b = ( downsampled_pixel & 0b0000000000011111);
 
         uint16_t averaged_pixel;
-        averaged_pixel  =   (b / (range))       & 0b0000000000011111;
-        averaged_pixel |= (((g / (range)) << 5)  & 0b0000011111100000);
-        averaged_pixel |= (((r / (range)) << 11) & 0b1111100000000000);
+        averaged_pixel  =   (b / weight)       & 0b0000000000011111;
+        averaged_pixel |= (((g / weight) << 5)  & 0b0000011111100000);
+        averaged_pixel |= (((r / weight) << 11) & 0b1111100000000000);
         
-        dest[x] += averaged_pixel;
+        dest[x] = downsampled_pixel;
     }
 }
 
@@ -87,7 +98,8 @@ void areaAverageHandleFrameStart() {
 
 // TODO all broke cuz of switching to current_downsampled_scanline
 void areaAverageHandleDownsampling(uint16_t *src, int scanline, void (*callback)(uint16_t *, int)) {
-    areaAverageDownsampleLine(src, downsampled_row);
+    uint8_t weight = scanline - ((current_downsampled_scanline * DOWNSAMPLING_FACTOR_OUT_OF_100) / 100) + 1 == 0 ? 2 : 4;
+    areaAverageDownsampleLine(src, downsampled_row, weight);
     
     // this represents the last true scanline the current downsampling line needs to process
     const uint8_t last_downsample_line = ((current_downsampled_scanline + 1) * DOWNSAMPLING_FACTOR_OUT_OF_100 - 1) / 100;
@@ -102,7 +114,7 @@ void areaAverageHandleDownsampling(uint16_t *src, int scanline, void (*callback)
         const uint8_t first_downsample_line = (current_downsampled_scanline * DOWNSAMPLING_FACTOR_OUT_OF_100) / 100;
 
         if (first_downsample_line == scanline) {
-            areaAverageDownsampleLine(src, downsampled_row);
+            areaAverageDownsampleLine(src, downsampled_row, 4);
         }
     }
 }

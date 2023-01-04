@@ -23,12 +23,12 @@ void st7789_240_135_handleFrameStart(uint8_t frame) {
 void st7789_240_135_blit(uint16_t *downsampled_line, int scanline) {
     // st7789_fill(scanline % 2 == 0 ? 0x0000 : 0xffff);
     st7789_set_cursor((MEMORY_WIDTH - LCD_WIDTH) / 2 + SCREEN_WIDTH_OFFSET, (MEMORY_HEIGHT - LCD_HEIGHT) / 2 + (scanline));
-    // st7789_write(downsampled_line, sizeof(downsampled_line) * DOWNSAMPLED_WIDTH/2);
+    st7789_write(downsampled_line, DOWNSAMPLED_WIDTH*sizeof(uint16_t)); ///???
     
-    // write() has had some issues... use this instead if you are trying to blit less than a full row
-    for (uint16_t x = 0; x < DOWNSAMPLED_WIDTH; x++) {
-        st7789_put(downsampled_line[x]); 
-    }
+    // for debugging
+    // for (uint16_t x = 0; x < DOWNSAMPLED_WIDTH; x++) {
+        // st7789_put(downsampled_line[x]); 
+    // }
 }
 
 void st7789_240_135_handleScanline(uint16_t *line, int scanline) {

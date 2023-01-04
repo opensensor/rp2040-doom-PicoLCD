@@ -13,9 +13,6 @@
 extern "C" {
 #endif
 
-#undef DOWNSAMPLING_FACTOR_OUT_OF_100
-#define DOWNSAMPLING_FACTOR_OUT_OF_100 500
-
 void ssd1306_70_40_initScreen(void);
 void ssd1306_70_40_handleScanline(uint16_t *line, int scanline);
 void ssd1306_70_40_handleFrameStart(uint8_t frame);

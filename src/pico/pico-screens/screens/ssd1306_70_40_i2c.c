@@ -140,8 +140,5 @@ void ssd1306_70_40_i2c_handleFrameEnd(uint8_t frame) {
     // and if we don't know, we can't avoid frame tearing
     SSD1306_send_cmd_list(command_park,count_of(command_park));
 
-
-    // some kinda race condition at the start
-    if (frame < 254) sleep_ms(8);
     // SSD1306_send_cmd(SSD1306_SET_NORM_DISP);
 }

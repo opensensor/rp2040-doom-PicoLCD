@@ -130,10 +130,10 @@ extern "C" {
 /**
  * Initialize the HAL
  */
-void hagl_hal_init(void); // hagl_backend_t *backend
-void put_pixel(int16_t x0, int16_t y0, color_t color);
-void blit(int16_t x0, int16_t y0, uint16_t width, uint16_t height, uint16_t *src);
-void hline(int16_t x0, int16_t y0, uint16_t width, color_t color);
+// void hagl_hal_init(void); // hagl_backend_t *backend
+// void put_pixel(int16_t x0, int16_t y0, color_t color);
+// void blit(int16_t x0, int16_t y0, uint16_t width, uint16_t height, uint16_t *src);
+// void hline(int16_t x0, int16_t y0, uint16_t width, color_t color);
 
 
 #ifdef __cplusplus

@@ -1,10 +1,25 @@
 #include "screen.h"
+#include "hardware/gpio.h"
 
+#if LILYGO_TTGO
 #include "screens/lilygo_ttgo.h"
+#endif
+
+#if ST7789_240_135
 #include "screens/st7789_240_135.h"
+#endif
+
+#if SSD1306_70_40
 #include "screens/ssd1306_70_40.hpp"
+#endif
+
+#if SSD1306_70_40_i2c
 #include "screens/ssd1306_70_40_i2c.h"
+#endif
+
+#if ST7735_128_128
 #include "screens/st7735_128_128.h"
+#endif
 
 #if SSD1306_70_40
 static void* ssd1306_70_40;

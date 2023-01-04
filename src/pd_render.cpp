@@ -2961,12 +2961,6 @@ void pd_end_frame(int wipe_start) {
     printf("GS %d vt %d fi %d\n", gamestate, next_video_type, next_frame_index);
 #endif
     sem_release(&render_frame_ready);
-    // st7789_set_cursor(40,40);
-    // st7789_write(render_frame_buffer, sizeof(frame_buffer[render_frame_index])/8);
-    // uint8_t *my_buffer = render_frame_buffer;
-    // for (int i = 0; i < SCREENWIDTH * MAIN_VIEWHEIGHT; i++) {
-    //     st7789_write(my_buffer++, sizeof(*my_buffer));
-    // }
     DEBUG_PINS_CLR(start_end, 2);
 }
 
