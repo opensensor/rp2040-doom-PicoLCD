@@ -35,6 +35,7 @@ target_sources(common INTERFACE
     m_misc.c             m_misc.h)
 
 target_compile_definitions(common INTERFACE
+        PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64
         #HACK_FINALE_E1M1=1
         #HACK_FINALE_SHAREWARE=1
 #        DEBUG_MOBJ=1

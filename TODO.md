@@ -3,6 +3,7 @@
 
 ## Greyscale Epic
 
+* reduce duplication in greyscale draw code
 * add greyscale to SSD1306 SPI too
 * make greyscale flash less
   * this might require fully rewinding multithreading
@@ -12,6 +13,7 @@
 ## ST7789 / 7735 Cleanup Epic
 
 * embed LCD_WIDTH and LCD_HEIGHT as settable variables. If we only refer to them inside the pico-screens directory we can also set defaults
+  * this allows us to abstract away DOWNSAMPLING_FACTOR
   * LCD_X_OFFSET and LCD_Y_OFFSET?
 * have st7789 use mipi_display too?
   * set up a comparison
@@ -27,6 +29,9 @@
 
 ## Misc
 
+* move screen libraries to external/
+* tighten up any libraries where I position the cursor for each line - we should be able to set memory windows for all of these controllers
+  * although I remember the st7789 being kind of difficult...
 * remove all TODOs
 * make some modifications to the readme:
   * explain what I changed and why
