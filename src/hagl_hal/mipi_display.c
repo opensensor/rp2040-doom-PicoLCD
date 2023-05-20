@@ -208,7 +208,7 @@ void mipi_display_init()
     sleep_ms(100);
 
     /* Reset the display. */
-    if (MIPI_DISPLAY_PIN_RST > 0) {
+    if (MIPI_DISPLAY_PIN_RST >= 0) {
         gpio_set_function(MIPI_DISPLAY_PIN_RST, GPIO_FUNC_SIO);
         gpio_set_dir(MIPI_DISPLAY_PIN_RST, GPIO_OUT);
 

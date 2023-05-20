@@ -1,12 +1,22 @@
 #include "st7789_240_135.h"
 
+// static const struct st7789_config lcd_config = {
+//     .spi      = PICO_DEFAULT_SPI_INSTANCE,
+//     .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
+//     .gpio_clk = PICO_DEFAULT_SPI_SCK_PIN,
+//     .gpio_cs  = PICO_DEFAULT_SPI_CSN_PIN,
+//     .gpio_dc  = 20,
+//     .gpio_rst = 21,
+//     .gpio_bl  = 22,
+// };
+
 static const struct st7789_config lcd_config = {
     .spi      = PICO_DEFAULT_SPI_INSTANCE,
-    .gpio_din = PICO_DEFAULT_SPI_TX_PIN,
-    .gpio_clk = PICO_DEFAULT_SPI_SCK_PIN,
-    .gpio_cs  = PICO_DEFAULT_SPI_CSN_PIN,
-    .gpio_dc  = 20,
-    .gpio_rst = 21,
+    .gpio_din = 3,
+    .gpio_clk = 2,
+    .gpio_cs  = 5,
+    .gpio_dc  = 1,
+    .gpio_rst = 0,
     .gpio_bl  = 22,
 };
 
