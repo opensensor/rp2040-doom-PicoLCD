@@ -1,3 +1,25 @@
+# RP2040 Doom, now for I2C and SPI displays!
+
+This is a fork of Graham Sanderson's Doom port for the RP2040. It adds support for certain SPI and I2c displays; it's also _very much_ not finished, but it does work. 
+
+Graham's original port targeted DVI output, which was incredibly ambitious and all the more impressive that he pulled it off. He had many optimizations to make his code as fast as possible and used a scanline buffer array in order to make the tight timings DVI signal requires.
+
+I ripped out almost all of those optimizations (except for the VPatch stuff) and slapped on a line buffer and some downsampling code, and then made an interface to blit that buffer to different displays. It uh... it was a lot of work, it just doesn't sound like it.
+
+You build just as you would for the original Doom port; I've modified the CMake targets to spit out binaries for each display.
+
+A non-exhaustive list of the hardware that has run this port:
+
+* a Raspberry Pi Pico
+* My custom PCB with one of [these](https://www.aliexpress.us/item/3256803794221438.html?spm=a2g0o.order_list.order_list_main.4.651c1802EaKSD2&gatewayAdapt=glo2usa), either the 0.96 or the 1.14 inch displays
+* [this little guy](https://www.aliexpress.us/item/3256804711797928.html?spm=a2g0o.order_list.order_list_main.107.651c1802EaKSD2&gatewayAdapt=glo2usa)
+* A [Lilygo TTGo T-Display](https://www.aliexpress.us/item/3256803094729227.html?spm=a2g0o.order_list.order_list_main.127.651c1802EaKSD2&gatewayAdapt=glo2usa)
+
+The mipi display library should allow for the addition of many more displays with minimal effort, but I can't give support for adding new displays right now, so you're on your own! If you do want to add a display I encourage you to look at the commit diffs and the pull request to get better context on what changed and why.
+
+
+# Original description
+
 # RP2040 Doom
 
 This is a port of Doom for RP2040 devices, derived from [Chocolate Doom](https://github.com/chocolate-doom/chocolate-doom).
