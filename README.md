@@ -1,5 +1,7 @@
 # RP2040 Doom, now for I2C and SPI displays!
 
+https://www.youtube.com/shorts/YlykSvr83Jc
+
 This is a fork of Graham Sanderson's Doom port for the RP2040. It adds support for certain SPI and I2c displays; it's also _very much_ not finished, but it does work. 
 
 Graham's original port targeted DVI output, which was incredibly ambitious and all the more impressive that he pulled it off. He had many optimizations to make his code as fast as possible and used a scanline buffer array in order to make the tight timings DVI signal requires.
