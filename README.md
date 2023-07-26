@@ -141,7 +141,7 @@ binary would just have made things bigger and slower.
 [SDL Event Forwarder](https://github.com/kilograham/sdl_event_forwarder) to tunnel keyboard input from your host 
   computer over UART. The WHX file must be loaded at `0x10040000`. 
 * **doom_tiny_usb** This is a "super tiny" version with additional USB keyboard support. Because of the extra USB 
-  code, the WHX file must be loaded at `0x10042000`. As you can see USB support via TinyUSB causes the binary to 
+  code, the WHX file must be loaded at `0x10044000`. As you can see USB support via TinyUSB causes the binary to 
   grow by 2K (hence the move of the WHX file address) leaving less space for saved games (which are also stored in 
   flash).
 * **doom_tiny_nost** This is a "non super tiny" version of `doom_tiny` supporting larger WADs stored as WHD. The WHD 
@@ -153,7 +153,7 @@ binary would just have made things bigger and slower.
 You can load you WHD/WHX file using [picotool](https://github.com/raspberrypi/picotool). e.g.
 
 ```bash
-picotool load -v -t bin doom1.whx -o 0x10042000.
+picotool load -v -t bin doom1.whx -o 0x10044000.
 ```
 
 See `whd_gen` further below for generating `WHX` or `WHD` files.
