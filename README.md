@@ -1,8 +1,21 @@
-# RP2040 Doom, now for I2C and SPI displays!
+# rp2040-doom-LCD forked and modified to work with Waveshare Pico LCD 1.14" (ST7789)
 
-![](https://i.imgur.com/QxaZdQg.jpeg)
+```
+mkdir rp2040-build
+cd rp2040-build
+cmake -DCMAKE_BUILD_TYPE=MinSizeRel -DPICO_SDK_PATH=~/pico/pico-sdk -DPICO_EXTRAS_PATH=~/pico/pico-extras ..
+```
 
-[youtube short here](https://www.youtube.com/shorts/YlykSvr83Jc)
+Target `doom_tiny_ST7789_240_135`: No USB and WAD address changed to 0x10041000
+```
+make doom_tiny_ST7789_240_135
+sudo picotool load src/doom_tiny_ST7789_240_135.uf2
+sudo picotool load -v -t bin ../doom1.whx -o 0x10041000
+```
+
+***
+
+# Description from rp2040-doom-LCD by rsheldiii: RP2040 Doom, now for I2C and SPI displays!
 
 This is a fork of Graham Sanderson's Doom port for the RP2040. It adds support for certain SPI and I2c displays; it's also _very much_ not finished, but it does work. 
 
@@ -12,16 +25,11 @@ I ripped out almost all of those optimizations (except for the VPatch stuff), sl
 
 You build just as you would for the original Doom port; I've modified the CMake targets to spit out binaries for each display.
 
-A non-exhaustive list of the hardware that has run this port:
-
-* a Raspberry Pi Pico
-* My custom PCB with one of [these](https://www.aliexpress.us/item/3256803794221438.html?spm=a2g0o.order_list.order_list_main.4.651c1802EaKSD2&gatewayAdapt=glo2usa), either the 0.96 or the 1.14 inch displays
-* [this little guy](https://www.aliexpress.us/item/3256804711797928.html?spm=a2g0o.order_list.order_list_main.107.651c1802EaKSD2&gatewayAdapt=glo2usa)
-* A [Lilygo TTGo T-Display](https://www.aliexpress.us/item/3256803094729227.html?spm=a2g0o.order_list.order_list_main.127.651c1802EaKSD2&gatewayAdapt=glo2usa)
-
 The mipi display library should allow for the addition of many more displays with minimal effort, but I can't give support for adding new displays right now, so you're on your own! If you do want to add a display I encourage you to look at the commit diffs and the pull request to get better context on what changed and why.
 
-# Original description
+***
+
+# Original description from rp2040-doom by Graham Sanderson
 
 # RP2040 Doom
 
