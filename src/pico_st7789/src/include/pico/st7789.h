@@ -20,6 +20,8 @@ struct st7789_config {
     uint gpio_bl;
 };
 
+void loop_delay(void);
+
 void st7789_init(const struct st7789_config* config, uint16_t width, uint16_t height);
 void st7789_write(const void* data, size_t len);
 void st7789_put(uint16_t pixel);
