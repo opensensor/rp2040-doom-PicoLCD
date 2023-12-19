@@ -1,5 +1,8 @@
 # rp2040-doom-LCD forked and modified to work with Waveshare Pico LCD 1.14" (ST7789)
 
+This fork is based on `rp2040-doom-LCD` by `rsheldiii` and adds modifications to work with Waveshare Pico LCD 1.14".
+`rp2040-doom-LCD` is based on original RP2040 Doom port `rp2040-doom` by `Graham Sanderson` (`kilograham`)
+
 ```
 mkdir rp2040-build
 cd rp2040-build
