@@ -119,9 +119,6 @@ void areaAverageHandleDownsampling(uint16_t *src, int scanline, void (*callback)
     }
 }
 
-
-
-
 // these could have the same signature, but we have no need of the end of the array
 uint16_t nearestNeighborDownsamplePixelGroup(uint16_t *src) {
     return src[0]; // lol

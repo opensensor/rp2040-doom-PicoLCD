@@ -660,12 +660,12 @@ endif()
 
 function(add_doom_tiny_screen SCREEN)
     if (PICO_SDK)
-        # add_doom_tiny(_${SCREEN} ${SCREEN})
+        add_doom_tiny(_${SCREEN} ${SCREEN})
 
-        # target_compile_definitions(doom_tiny_${SCREEN} PRIVATE
-        #         TINY_WAD_ADDR=0x10040000
-        # )
-        # target_link_libraries(doom_tiny_${SCREEN} PRIVATE tiny_settings)
+        target_compile_definitions(doom_tiny_${SCREEN} PRIVATE
+                TINY_WAD_ADDR=0x10041000
+        )
+        target_link_libraries(doom_tiny_${SCREEN} PRIVATE tiny_settings)
 
         # disabled because I don't need it, probably still works...
         # add_doom_tiny(_nost_${SCREEN} ${SCREEN})
@@ -693,9 +693,6 @@ function(add_doom_tiny_screen SCREEN)
     endif()
 endfunction()
 
-
-
-
 add_doom_tiny_screen("SSD1306_70_40")
 target_compile_definitions(doom_tiny_usb_SSD1306_70_40 PRIVATE
     DOWNSAMPLING_FACTOR_OUT_OF_100=500
@@ -711,8 +708,13 @@ target_compile_definitions(doom_tiny_usb_LILYGO_TTGO PRIVATE
     DOWNSAMPLING_FACTOR_OUT_OF_100=148
 )
 
+#add_doom_tiny_screen("ST7789_240_135")
+#target_compile_definitions(doom_tiny_usb_ST7789_240_135 PRIVATE
+#    DOWNSAMPLING_FACTOR_OUT_OF_100=148
+#)
+
 add_doom_tiny_screen("ST7789_240_135")
-target_compile_definitions(doom_tiny_usb_ST7789_240_135 PRIVATE
+target_compile_definitions(doom_tiny_ST7789_240_135 PRIVATE
     DOWNSAMPLING_FACTOR_OUT_OF_100=148
 )
 

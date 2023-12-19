@@ -12,7 +12,6 @@ static void blit(int16_t x0, int16_t y0, uint16_t width, uint16_t height, uint16
     mipi_display_write(x0, y0, width, height, (uint8_t *) src);
 }
 
-
 void st7735_128_128_initScreen(void) {
 
     mipi_display_init();

@@ -8,7 +8,6 @@ extern "C" {
 #include "pico.h"
 #include "i_video.h"
 
-
 #define DOOM_WIDTH SCREENWIDTH
 #define DOOM_HEIGHT SCREENHEIGHT
 

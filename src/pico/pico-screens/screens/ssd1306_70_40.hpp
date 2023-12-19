@@ -18,7 +18,6 @@ void ssd1306_70_40_handleScanline(uint16_t *line, int scanline);
 void ssd1306_70_40_handleFrameStart(uint8_t frame);
 void ssd1306_70_40_handleFrameEnd(uint8_t frame);
 
-
 #ifdef __cplusplus
 }
 #endif
