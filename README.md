@@ -16,7 +16,7 @@ sudo picotool load src/doom_tiny_ST7789_240_135.uf2
 sudo picotool load -v -t bin ../doom1.whx -o 0x10041000
 ```
 
-Pin list
+Pin list (`https://www.waveshare.com/wiki/Pico-LCD-1.14`)
 ```
 LCD SPI instance = SPI1
 LCD DIN/MOSI = GPIO 11
@@ -26,7 +26,15 @@ LCD DC = GPIO 8
 LCD RST = GPIO 12
 LCD Backlight = GPIO 13
 
-UART TX = GPIO 0
+Key A = GPIO 15
+Key B = GPIO 17
+Joystick UP = GPIO 2
+Joystick DOWN = GPIO 18
+Joystick LEFT = GPIO 16
+Joystick RIGHT = GPIO 20
+Joystick PRESS = GPIO 3
+
+UART TX = GPIO 0 (BAUDRATE = 115200)
 UART RX = GPIO 1
 ```
 
