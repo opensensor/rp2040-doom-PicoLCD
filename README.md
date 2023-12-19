@@ -16,6 +16,20 @@ sudo picotool load src/doom_tiny_ST7789_240_135.uf2
 sudo picotool load -v -t bin ../doom1.whx -o 0x10041000
 ```
 
+Pin list
+```
+LCD SPI instance = SPI1
+LCD DIN/MOSI = GPIO 11
+LCD CLK = GPIO 10
+LCD CS = GPIO 9
+LCD DC = GPIO 8
+LCD RST = GPIO 12
+LCD Backlight = GPIO 13
+
+UART TX = GPIO 0
+UART RX = GPIO 1
+```
+
 ***
 
 # Description from rp2040-doom-LCD by rsheldiii: RP2040 Doom, now for I2C and SPI displays!
