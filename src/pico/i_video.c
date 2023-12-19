@@ -194,7 +194,43 @@ void I_SetWindowTitle(const char *title)
 //
 void I_SetPaletteNum(int doompalette)
 {
+    // Palette indices.
+    // For damage/bonus red-/gold-shifts
+    // #define STARTREDPALS		1
+    // #define STARTBONUSPALS		9
+    // #define NUMREDPALS			8
+    // #define NUMBONUSPALS		4
+    // Radiation suit, green shift.
+    // #define RADIATIONPAL		13
+
+    static uint8_t initdone = 0;
+
+    if(initdone == 0)
+    {
+        gpio_init(14);
+        gpio_init(17);
+
+        gpio_set_dir(14, GPIO_OUT);
+        gpio_set_dir(17, GPIO_OUT);
+
+        gpio_put(14, 0);
+        gpio_put(17, 0);
+
+        initdone = 1;
+    }
+
+    switch(doompalette)
+    {
+        case(2): gpio_put(14, 1); break;
+        case(10): gpio_put(17, 1); break;
+        default:
+             gpio_put(14, 0);
+             gpio_put(17, 0);
+             break;
+    }
+
     next_pal = doompalette;
+    printf("Palette: %d\n", doompalette); // DEBUG
 }
 
 //
