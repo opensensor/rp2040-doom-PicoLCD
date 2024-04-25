@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "hardware/gpio.h"
+#include "hardware/pwm.h"
 
 #include "pico/st7789.h"
 
@@ -123,7 +124,7 @@ void st7789_init(const struct st7789_config* config, uint16_t width, uint16_t he
     gpio_put(st7789_cfg.gpio_dc, 1);
     gpio_put(st7789_cfg.gpio_rst, 1);
     sleep_ms(100);
-    
+
     // SWRESET (01h): Software Reset
     st7789_cmd(0x01, NULL, 0);
     sleep_ms(150);
@@ -146,7 +147,7 @@ void st7789_init(const struct st7789_config* config, uint16_t width, uint16_t he
     // - RGB/BGR Order                 = RGB
     // - Display Data Latch Data Order = LCD Refresh Left to Right
     st7789_cmd(0x36, (uint8_t[]){ 0b01100000 }, 1);
-   
+
     st7789_caset(0, width);
     st7789_raset(0, height);
 

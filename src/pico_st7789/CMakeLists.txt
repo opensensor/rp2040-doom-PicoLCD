@@ -23,8 +23,4 @@ target_include_directories(pico_st7789 INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/include
 )
 
-target_link_libraries(pico_st7789 INTERFACE pico_stdlib hardware_spi)
-
-add_subdirectory("examples/st7789_blink")
-add_subdirectory("examples/st7789_random")
-add_subdirectory("examples/st7789_random_rows")
+target_link_libraries(pico_st7789 INTERFACE pico_stdlib hardware_spi hardware_pwm)

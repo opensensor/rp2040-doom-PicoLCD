@@ -28,7 +28,7 @@
 #define SCREENWIDTH  320
 #define SCREENHEIGHT 200
 #if DOOM_TINY
-#define MAIN_VIEWHEIGHT (SCREENHEIGHT - 32 /* ST_HEIGHT */)
+#define MAIN_VIEWHEIGHT SCREENHEIGHT
 #endif
 
 // Screen height used when aspect_ratio_correct=true.
