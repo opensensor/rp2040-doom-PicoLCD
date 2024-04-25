@@ -12,8 +12,6 @@ static const struct st7789_config lcd_config = {
 
 void st7789_240_135_initScreen(void) {
     st7789_init(&lcd_config, LCD_WIDTH, LCD_HEIGHT);
-
-    // Fill the entire screen with black color at the end of initialization
     st7789_fill(0x0000);
 }
 
@@ -22,7 +20,7 @@ void st7789_240_135_handleFrameStart(uint8_t frame) {
 }
 
 void st7789_240_135_handleScanline(uint16_t *line, int scanline) {
-    uint16_t scaled_line[LCD_WIDTH];
+    static uint16_t scaled_line[LCD_WIDTH]; // Use a static array to avoid repeated allocations
     uint32_t scale_x = (SCREENWIDTH << 16) / LCD_WIDTH;
     uint32_t scale_y = (SCREENHEIGHT << 16) / LCD_HEIGHT;
     uint32_t offset_y = (LCD_HEIGHT - ((SCREENHEIGHT * LCD_WIDTH) / SCREENWIDTH)) / 2;
@@ -32,11 +30,7 @@ void st7789_240_135_handleScanline(uint16_t *line, int scanline) {
     if (dst_y < LCD_HEIGHT) {
         for (uint16_t x = 0; x < LCD_WIDTH; x++) {
             uint32_t src_x = (x * scale_x) >> 16;
-            if (src_x < SCREENWIDTH) {
-                scaled_line[x] = line[src_x];
-            } else {
-                scaled_line[x] = 0; // Fill with black color for out-of-bounds pixels
-            }
+            scaled_line[x] = (src_x < SCREENWIDTH) ? line[src_x] : 0;
         }
         st7789_set_cursor(0, dst_y);
         st7789_write(scaled_line, LCD_WIDTH * sizeof(uint16_t));
