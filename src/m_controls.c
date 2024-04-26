@@ -33,8 +33,8 @@ key_type_t key_left = KEY_LEFTARROW;
 
 key_type_t key_up = KEY_UPARROW;
 key_type_t key_down = KEY_DOWNARROW;
-key_type_t key_strafeleft = ',';
-key_type_t key_straferight = '.';
+key_type_t key_strafeleft = KEY_LEFTARROW;
+key_type_t key_straferight = KEY_RIGHTARROW;
 key_type_t key_fire = KEY_RCTRL;
 key_type_t key_use = ' ';
 key_type_t key_strafe = KEY_RALT;

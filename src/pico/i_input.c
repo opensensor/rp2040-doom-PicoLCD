@@ -32,13 +32,32 @@
 #include "m_argv.h"
 #include "m_config.h"
 #include "hardware/uart.h"
+#include "pico/stdlib.h"
+#include "hardware/gpio.h"
+#include "pico/sem.h"
+#include "pico/multicore.h"
 #include <stdlib.h>
+#include <time.h>  // For adding simple debouncing
 #if USB_SUPPORT
 #include "pico/binary_info.h"
 #include "tusb.h"
 #include "hardware/irq.h"
 bi_decl(bi_program_feature("USB keyboard support"));
 #endif
+
+#define DEBOUNCE_TIME 20 // debounce time in milliseconds
+// 19  21 11 18
+#define GPIO_A 3
+#define GPIO_B 5
+#define GPIO_X 2
+#define GPIO_Y 4
+#define GPIO_UP 16
+#define GPIO_DOWN 14
+#define GPIO_LEFT 10
+#define GPIO_RIGHT 17
+#define GPIO_START 20
+#define GPIO_SELECT 15
+
 
 static const int scancode_translate_table[] = SCANCODE_TO_KEYS_ARRAY;
 
@@ -520,6 +539,46 @@ void I_InputInit(void) {
     tusb_init();
     irq_set_priority(USBCTRL_IRQ, 0xc0);
 #endif
+    // Initialize GPIO pins as inputs
+    gpio_init(GPIO_A);
+    gpio_set_dir(GPIO_A, GPIO_IN);
+    gpio_pull_up(GPIO_A);
+
+    gpio_init(GPIO_B);
+    gpio_set_dir(GPIO_B, GPIO_IN);
+    gpio_pull_up(GPIO_B);
+
+    gpio_init(GPIO_X);
+    gpio_set_dir(GPIO_X, GPIO_IN);
+    gpio_pull_up(GPIO_X);
+
+    gpio_init(GPIO_Y);
+    gpio_set_dir(GPIO_Y, GPIO_IN);
+    gpio_pull_up(GPIO_Y);
+
+    gpio_init(GPIO_UP);
+    gpio_set_dir(GPIO_UP, GPIO_IN);
+    gpio_pull_up(GPIO_UP);
+
+    gpio_init(GPIO_DOWN);
+    gpio_set_dir(GPIO_DOWN, GPIO_IN);
+    gpio_pull_up(GPIO_DOWN);
+
+    gpio_init(GPIO_LEFT);
+    gpio_set_dir(GPIO_LEFT, GPIO_IN);
+    gpio_pull_up(GPIO_LEFT);
+
+    gpio_init(GPIO_RIGHT);
+    gpio_set_dir(GPIO_RIGHT, GPIO_IN);
+    gpio_pull_up(GPIO_RIGHT);
+
+    gpio_init(GPIO_SELECT);
+    gpio_set_dir(GPIO_SELECT, GPIO_IN);
+    gpio_pull_up(GPIO_SELECT);
+
+    gpio_init(GPIO_START);
+    gpio_set_dir(GPIO_START, GPIO_IN);
+    gpio_pull_up(GPIO_START);
 }
 
 void I_GetEvent() {
@@ -529,53 +588,94 @@ void I_GetEvent() {
     return I_GetEventTimeout(50);
 }
 
+
+#define NUM_BUTTONS 10
+#define PRESS_DELAY 1
+
 void I_GetEventTimeout(int key_timeout) {
-#if PICO_ON_DEVICE && !NO_USE_UART
-    if (uart_is_readable(uart_default)) {
-        char c = uart_getc(uart_default);
-        if (c == 26 && uart_is_readable_within_us(uart_default, key_timeout)) {
-            c = uart_getc(uart_default);
-            static int modifiers = 0;
-            switch (c) {
+    static uint32_t prev_gpio_state = 0;
+    uint32_t gpio_state = 0;
+
+    // Read the current state of all GPIO pins
+    gpio_state |= gpio_get(GPIO_A) ? (1 << 0) : 0;
+    gpio_state |= gpio_get(GPIO_B) ? (1 << 1) : 0;
+    gpio_state |= gpio_get(GPIO_X) ? (1 << 2) : 0;
+    gpio_state |= gpio_get(GPIO_Y) ? (1 << 3) : 0;
+    gpio_state |= gpio_get(GPIO_UP) ? (1 << 4) : 0;
+    gpio_state |= gpio_get(GPIO_DOWN) ? (1 << 5) : 0;
+    gpio_state |= gpio_get(GPIO_LEFT) ? (1 << 6) : 0;
+    gpio_state |= gpio_get(GPIO_RIGHT) ? (1 << 7) : 0;
+    gpio_state |= gpio_get(GPIO_START) ? (1 << 8) : 0;
+    gpio_state |= gpio_get(GPIO_SELECT) ? (1 << 9) : 0;
+
+    for (int i = 0; i < NUM_BUTTONS; i++) {
+        uint32_t button_mask = (1 << i);
+        uint32_t button_state = (gpio_state & button_mask) ? 1 : 0;
+        uint32_t prev_button_state = (prev_gpio_state & button_mask) ? 1 : 0;
+
+        if (button_state != prev_button_state) {
+            int scancode = 0;
+            int keysym = 0;
+
+            switch (i) {
                 case 0:
-                    if (uart_is_readable_within_us(uart_default, key_timeout)) {
-                        uint scancode = (uint8_t) uart_getc(uart_default);
-                        if (scancode == SDL_SCANCODE_LSHIFT || scancode == SDL_SCANCODE_RSHIFT) {
-                            modifiers |= WITH_SHIFT;
-                        }
-                        pico_key_down(scancode, 0, modifiers);
-                    }
-                    return;
+                    scancode = 40;
+                    keysym = KEY_ENTER;
+                    break;
                 case 1:
-                    if (uart_is_readable_within_us(uart_default, key_timeout)) {
-                        uint scancode = (uint8_t) uart_getc(uart_default);
-                        if (scancode == SDL_SCANCODE_LSHIFT || scancode == SDL_SCANCODE_RSHIFT) {
-                            modifiers &= ~WITH_SHIFT;
-                        }
-                        pico_key_up(scancode, 0, modifiers);
-                    }
-                    return;
+                    scancode = 41;
+                    keysym = KEY_ESCAPE;
+                    break;
                 case 2:
+                    scancode = 229;
+                    keysym = KEY_RSHIFT;
+                    break;
                 case 3:
-                case 5:
-                    if (uart_is_readable_within_us(uart_default, key_timeout)) {
-                        uint __unused scancode = (uint8_t) uart_getc(uart_default);
-                    }
-                    return;
+                    scancode = 228;
+                    keysym = KEY_RCTRL;
+                    break;
                 case 4:
-                    if (uart_is_readable_within_us(uart_default, key_timeout)) {
-                        uint __unused scancode = (uint8_t) uart_getc(uart_default);
-                    }
-                    if (uart_is_readable_within_us(uart_default, key_timeout)) {
-                        uint __unused scancode = (uint8_t) uart_getc(uart_default);
-                    }
-                    return;
+                    scancode = 82;
+                    keysym = KEY_UPARROW;
+                    break;
+                case 5:
+                    scancode = 81;
+                    keysym = KEY_DOWNARROW;
+                    break;
+                case 6:
+                    scancode = 80;
+                    keysym = KEY_LEFTARROW;
+                    break;
+                case 7:
+                    scancode = 79;
+                    keysym = KEY_RIGHTARROW;
+                    break;
+                case 8:
+                    scancode = 43;
+                    keysym = KEY_TAB;
+                    break;
+                case 9:
+                    scancode = 230;
+                    keysym = KEY_RALT;
+                    break;
+                default:
+                    break;
+            }
+
+            if (scancode != 0 && keysym != 0) {
+                if (button_state) {
+                    pico_key_down(scancode, keysym, 0);
+                    sleep_ms(PRESS_DELAY);
+                    pico_key_up(scancode, keysym, 0);
+                } else {
+                    pico_key_up(scancode, keysym, 0);
+                }
             }
         }
     }
-#endif
-}
 
+    prev_gpio_state = gpio_state;
+}
 #if USB_SUPPORT
 
 #define MAX_REPORT  4

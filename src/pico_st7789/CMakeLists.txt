@@ -19,6 +19,10 @@ target_sources(pico_st7789 INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/st7789.c
 )
 
+target_sources(pico_st7789 INTERFACE
+        ${CMAKE_CURRENT_LIST_DIR}/src/DEV_Config.c
+)
+
 target_include_directories(pico_st7789 INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/include
 )

@@ -28,6 +28,17 @@
 #include "m_argv.h"
 #include "m_config.h"
 
+#define GPIO_A 3
+#define GPIO_B 5
+#define GPIO_X 2
+#define GPIO_Y 4
+#define GPIO_UP 16
+#define GPIO_DOWN 14
+#define GPIO_LEFT 13
+#define GPIO_RIGHT 17
+#define GPIO_START 20
+#define GPIO_SELECT 15
+
 static const int scancode_translate_table[] = SCANCODE_TO_KEYS_ARRAY;
 
 // Lookup table for mapping ASCII characters to their equivalent when
@@ -241,11 +252,140 @@ static int GetTypedChar(SDL_Keysym *sym)
     }
 }
 
-void I_HandleKeyboardEvent(SDL_Event *sdlevent)
+void I_HandleKeyboardEvent()
 {
-    // XXX: passing pointers to event for access after this function
-    // has terminated is undefined behaviour
     event_t event;
+
+    // Check the state of each GPIO pin and generate the corresponding Doom input event
+    if (gpio_get(GPIO_A))
+    {
+        event.type = ev_keydown;
+        event.data1 = KEY_RCTRL; // Map button A to the fire key (RIGHT CTRL)
+        D_PostEvent(&event);
+    }
+    else
+    {
+        event.type = ev_keyup;
+        event.data1 = KEY_RCTRL;
+        D_PostEvent(&event);
+    }
+
+    if (gpio_get(GPIO_B))
+    {
+        event.type = ev_keydown;
+        event.data1 = KEY_SPACE; // Map button B to the use/open key (SPACE)
+        D_PostEvent(&event);
+    }
+    else
+    {
+        event.type = ev_keyup;
+        event.data1 = KEY_SPACE;
+        D_PostEvent(&event);
+    }
+
+    if (gpio_get(GPIO_X))
+    {
+        event.type = ev_keydown;
+        event.data1 = KEY_RALT; // Map button X to the strafe on/off key (RIGHT ALT)
+        D_PostEvent(&event);
+    }
+    else
+    {
+        event.type = ev_keyup;
+        event.data1 = KEY_RALT;
+        D_PostEvent(&event);
+    }
+
+    if (gpio_get(GPIO_Y))
+    {
+        event.type = ev_keydown;
+        event.data1 = KEY_RSHIFT; // Map button Y to the run key (RIGHT SHIFT)
+        D_PostEvent(&event);
+    }
+    else
+    {
+        event.type = ev_keyup;
+        event.data1 = KEY_RSHIFT;
+        D_PostEvent(&event);
+    }
+
+    if (gpio_get(GPIO_UP))
+    {
+        event.type = ev_keydown;
+        event.data1 = KEY_UPARROW; // Map the UP button to the up arrow key
+        D_PostEvent(&event);
+    }
+    else
+    {
+        event.type = ev_keyup;
+        event.data1 = KEY_UPARROW;
+        D_PostEvent(&event);
+    }
+
+    if (gpio_get(GPIO_DOWN))
+    {
+        event.type = ev_keydown;
+        event.data1 = KEY_DOWNARROW; // Map the DOWN button to the down arrow key
+        D_PostEvent(&event);
+    }
+    else
+    {
+        event.type = ev_keyup;
+        event.data1 = KEY_DOWNARROW;
+        D_PostEvent(&event);
+    }
+
+    if (gpio_get(GPIO_LEFT))
+    {
+        event.type = ev_keydown;
+        event.data1 = KEY_LEFTARROW; // Map the LEFT button to the left arrow key
+        D_PostEvent(&event);
+    }
+    else
+    {
+        event.type = ev_keyup;
+        event.data1 = KEY_LEFTARROW;
+        D_PostEvent(&event);
+    }
+
+    if (gpio_get(GPIO_RIGHT))
+    {
+        event.type = ev_keydown;
+        event.data1 = KEY_RIGHTARROW; // Map the RIGHT button to the right arrow key
+        D_PostEvent(&event);
+    }
+    else
+    {
+        event.type = ev_keyup;
+        event.data1 = KEY_RIGHTARROW;
+        D_PostEvent(&event);
+    }
+
+    if (gpio_get(GPIO_START))
+    {
+        event.type = ev_keydown;
+        event.data1 = KEY_ESCAPE; // Map the START button to the escape key (ESC)
+        D_PostEvent(&event);
+    }
+    else
+    {
+        event.type = ev_keyup;
+        event.data1 = KEY_ESCAPE;
+        D_PostEvent(&event);
+    }
+
+    if (gpio_get(GPIO_SELECT))
+    {
+        event.type = ev_keydown;
+        event.data1 = KEY_BACKSPACE; // Map the SELECT button to the backspace key
+        D_PostEvent(&event);
+    }
+    else
+    {
+        event.type = ev_keyup;
+        event.data1 = KEY_BACKSPACE;
+        D_PostEvent(&event);
+    }
 
     switch (sdlevent->type)
     {

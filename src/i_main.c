@@ -85,7 +85,8 @@ int main(int argc, char **argv)
     // do init early to set pulls
     piconet_init();
 #endif
-//!
+
+    //
     // Print the program version and exit.
     //
     if (M_ParmExists("-version") || M_ParmExists("--version")) {
@@ -97,9 +98,9 @@ int main(int argc, char **argv)
     M_FindResponseFile();
 #endif
 
-    #ifdef SDL_HINT_NO_SIGNAL_HANDLERS
+#ifdef SDL_HINT_NO_SIGNAL_HANDLERS
     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
-    #endif
+#endif
 
     // start doom
 

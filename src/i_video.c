@@ -416,11 +416,13 @@ static void I_ToggleFullScreen(void)
 
 void I_GetEvent(void)
 {
-    extern void I_HandleKeyboardEvent(SDL_Event *sdlevent);
+    extern void I_HandleKeyboardEvent();
     extern void I_HandleMouseEvent(SDL_Event *sdlevent);
     SDL_Event sdlevent;
 
     SDL_PumpEvents();
+
+    I_HandleKeyboardEvent();
 
     while (SDL_PollEvent(&sdlevent))
     {
@@ -433,10 +435,6 @@ void I_GetEvent(void)
                     break;
                 }
                 // deliberate fall-though
-
-            case SDL_KEYUP:
-		I_HandleKeyboardEvent(&sdlevent);
-                break;
 
             case SDL_MOUSEBUTTONDOWN:
             case SDL_MOUSEBUTTONUP:
